@@ -1,0 +1,111 @@
+name: Scheduled VAPT Scan
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly Monday 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target domain to scan'
+        required: true
+        type: string
+      profile:
+        description: 'Scan profile'
+        required: true
+        type: choice
+        options:
+          - quick
+          - standard
+          - deep
+          - compliance
+        default: standard
+      report_formats:
+        description: 'Report formats'
+        required: false
+        type: string
+        default: html,pdf,json
+
+jobs:
+  scan:
+    name: Run VAPT Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      actions: write
+    container:
+      image: ghcr.io/${{ github.repository }}:latest
+      options: --user 1000:1000
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create output directory
+        run: mkdir -p reports
+
+      - name: Run scan
+        id: scan
+        run: |
+          vapt-recon scan "${{ github.event.inputs.target || 'example.com' }}" \
+            --profile "${{ github.event.inputs.profile }}" \
+            --report ${{ github.event.inputs.report_formats }} \
+            --output ./reports \
+            --rate 50
+
+      - name: Upload reports as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vapt-reports-${{ github.event.inputs.target || 'scan' }}-${{ github.run_number }}
+          path: reports/
+          retention-days: 30
+
+      - name: Summarize findings
+        id: summary
+        run: |
+          # Find the JSON report
+          JSON_REPORT=$(find reports -name "*.json" | head -1)
+          if [ -f "$JSON_REPORT" ]; then
+            CRITICAL=$(jq '.summary.findings_by_severity.critical // 0' "$JSON_REPORT")
+            HIGH=$(jq '.summary.findings_by_severity.high // 0' "$JSON_REPORT")
+            MEDIUM=$(jq '.summary.findings_by_severity.medium // 0' "$JSON_REPORT")
+            LOW=$(jq '.summary.findings_by_severity.low // 0' "$JSON_REPORT")
+            TOTAL=$(jq '.summary.findings // 0' "$JSON_REPORT")
+
+            echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+            echo "high=$HIGH" >> $GITHUB_OUTPUT
+            echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
+            echo "low=$LOW" >> $GITHUB_OUTPUT
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          else
+            echo "critical=0" >> $GITHUB_OUTPUT
+            echo "high=0" >> $GITHUB_OUTPUT
+            echo "medium=0" >> $GITHUB_OUTPUT
+            echo "low=0" >> $GITHUB_OUTPUT
+            echo "total=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create scan summary
+        run: |
+          echo "## VAPT Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ github.event.inputs.target || 'example.com' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Profile:** ${{ github.event.inputs.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | ${{ steps.summary.outputs.critical }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| High | ${{ steps.summary.outputs.high }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Medium | ${{ steps.summary.outputs.medium }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Low | ${{ steps.summary.outputs.low }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | **${{ steps.summary.outputs.total }}** |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on critical findings
+        if: steps.summary.outputs.critical > 0 || steps.summary.outputs.high > 0
+        run: |
+          echo "⚠️ Critical/High findings detected!"
+          if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"🚨 *VAPT Scan Alert*\nTarget: ${{ github.event.inputs.target }}\nCritical: ${{ steps.summary.outputs.critical }}\nHigh: ${{ steps.summary.outputs.high }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Results>\"}" \
+              ${{ secrets.SLACK_WEBHOOK }}
+          fi

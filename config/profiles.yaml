@@ -1,0 +1,152 @@
+# vapt-recon scan profiles
+# Each profile defines tool parameters and template selection
+
+profiles:
+  quick:
+    name: "Quick Scan"
+    description: "Fast reconnaissance for initial assessment (~5 min)"
+    subdomains:
+      sources: ["subfinder"]
+      recursive: false
+      timeout: 60
+    ports:
+      tool: "naabu"
+      top_ports: 100
+      rate: 500
+      nmap_followup: false
+    tech:
+      tools: ["httpx"]
+      timeout: 30
+    vulns:
+      nuclei:
+        severity: ["critical"]
+        tags: ["cve", "rce", "sqli"]
+        rate_limit: 50
+        templates_dir: null  # use default
+    params:
+      enabled: false
+    enrich:
+      enabled: false
+    estimated_time_minutes: 5
+
+  standard:
+    name: "Standard Scan"
+    description: "Balanced coverage for typical VAPT engagements (~20 min)"
+    subdomains:
+      sources: ["subfinder", "amass", "assetfinder", "crtsh"]
+      recursive: true
+      timeout: 180
+    ports:
+      tool: "naabu"
+      top_ports: 1000
+      rate: 300
+      nmap_followup: true
+      nmap_args: "-sV --version-intensity 5"
+    tech:
+      tools: ["httpx", "wappalyzer"]
+      timeout: 60
+    vulns:
+      nuclei:
+        severity: ["critical", "high"]
+        tags: ["cve", "rce", "sqli", "xss", "ssrf", "idor", "lfi", "rfi"]
+        exclude_tags: ["dos", "fuzz"]
+        rate_limit: 100
+        templates_dir: null
+    params:
+      enabled: true
+      tools: ["katana", "paramspider"]
+      max_urls: 500
+      fuzz_params: true
+    enrich:
+      enabled: true
+      whois: true
+      dns: true
+      ssl: true
+    estimated_time_minutes: 20
+
+  deep:
+    name: "Deep Scan"
+    description: "Comprehensive coverage for critical assets (~60+ min)"
+    subdomains:
+      sources: ["subfinder", "amass", "assetfinder", "crtsh", "subjack", "dnsdumpster"]
+      recursive: true
+      timeout: 600
+      bruteforce: true
+      wordlist: "subdomains-top1million-110000.txt"
+    ports:
+      tool: "naabu"
+      top_ports: 0  # full scan
+      rate: 200
+      nmap_followup: true
+      nmap_args: "-sV -sC --version-intensity 9 -p-"
+    tech:
+      tools: ["httpx", "wappalyzer", "whatweb"]
+      timeout: 120
+    vulns:
+      nuclei:
+        severity: ["critical", "high", "medium"]
+        tags: []  # all tags
+        exclude_tags: ["dos", "fuzz", "info"]
+        rate_limit: 50
+        templates_dir: null
+        custom_templates: true
+    params:
+      enabled: true
+      tools: ["katana", "paramspider", "arjun"]
+      max_urls: 2000
+      fuzz_params: true
+      fuzz_wordlist: "fuzz-params.txt"
+    enrich:
+      enabled: true
+      whois: true
+      dns: true
+      ssl: true
+      shodan: true
+      censys: true
+    estimated_time_minutes: 60
+
+  compliance:
+    name: "Compliance Scan"
+    description: "Targeted scan for compliance frameworks (PCI-DSS, HIPAA, etc.)"
+    subdomains:
+      sources: ["subfinder", "amass", "crtsh"]
+      recursive: false
+      timeout: 180
+    ports:
+      tool: "naabu"
+      top_ports: 1000
+      rate: 300
+      nmap_followup: true
+      nmap_args: "-sV --script ssl-cert,ssl-enum-ciphers"
+    tech:
+      tools: ["httpx", "wappalyzer"]
+      timeout: 60
+    vulns:
+      nuclei:
+        severity: ["critical", "high", "medium"]
+        tags: ["cve", "misconfig", "exposure", "ssl", "tls"]
+        include_templates:
+          - "pci-dss"
+          - "hipaa"
+          - "gdpr"
+          - "iso27001"
+        rate_limit: 50
+    params:
+      enabled: true
+      tools: ["katana", "paramspider"]
+      max_urls: 1000
+      fuzz_params: false
+    enrich:
+      enabled: true
+      whois: true
+      dns: true
+      ssl: true
+    estimated_time_minutes: 30
+
+# Global settings
+global:
+  default_profile: "standard"
+  max_concurrent_scans: 1
+  checkpoint_interval: 30  # seconds
+  default_output_dir: "./reports"
+  default_rate_limit: 100

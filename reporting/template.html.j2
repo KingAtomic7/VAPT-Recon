@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAPT Report - {{ config.target }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+            body { font-size: 11pt; }
+            .card { break-inside: avoid; }
+        }
+        .severity-critical { background: #fee2e2; border-left: 4px solid #dc2626; }
+        .severity-high { background: #ffedd5; border-left: 4px solid #ea580c; }
+        .severity-medium { background: #fef3c7; border-left: 4px solid #d97706; }
+        .severity-low { background: #dbeafe; border-left: 4px solid #2563eb; }
+        .severity-info { background: #f3f4f6; border-left: 4px solid #6b7280; }
+        .badge-critical { background: #dc2626; }
+        .badge-high { background: #ea580c; }
+        .badge-medium { background: #d97706; }
+        .badge-low { background: #2563eb; }
+        .badge-info { background: #6b7280; }
+    </style>
+</head>
+<body class="bg-gray-50 font-mono text-gray-900">
+    <div class="max-w-6xl mx-auto p-8">
+        <!-- Cover Page -->
+        <div class="page-break no-print"></div>
+        <div class="text-center py-20">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">VAPT Reconnaissance Report</h1>
+            <h2 class="text-2xl text-gray-600 mb-8">{{ config.target }}</h2>
+            <div class="inline-block bg-gray-100 p-6 rounded-lg">
+                <p class="text-lg"><strong>Profile:</strong> {{ config.profile.value | title }}</p>
+                <p class="text-lg"><strong>Scan Date:</strong> {{ metadata.started_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+                <p class="text-lg"><strong>Duration:</strong> {{ "%.1f"|format(metadata.duration_seconds or 0) }}s</p>
+                <p class="text-lg"><strong>Scan ID:</strong> {{ metadata.scan_id }}</p>
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="page-break"></div>
+        <h1 class="text-3xl font-bold border-b-2 border-gray-200 pb-2 mb-6">1. Executive Summary</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow card">
+                <p class="text-sm text-gray-500">Subdomains</p>
+                <p class="text-4xl font-bold text-gray-900">{{ subdomains|length }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow card">
+                <p class="text-sm text-gray-500">Services</p>
+                <p class="text-4xl font-bold text-gray-900">{{ services|length }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow card">
+                <p class="text-sm text-gray-500">Technologies</p>
+                <p class="text-4xl font-bold text-gray-900">{{ technologies|length }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow card">
+                <p class="text-sm text-gray-500">Total Findings</p>
+                <p class="text-4xl font-bold text-gray-900">{{ findings|length }}</p>
+            </div>
+        </div>
+
+        {% if findings %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow card">
+                <h2 class="text-xl font-semibold mb-4">Finding Severity Distribution</h2>
+                <canvas id="severityChart" height="200"></canvas>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow card">
+                <h2 class="text-xl font-semibold mb-4">Top Risk Areas</h2>
+                <ul class="space-y-2">
+                    {% for finding in findings|sort(attribute='severity', reverse=true)|slice(0, 5) %}
+                    <li class="flex items-center gap-3">
+                        <span class="px-2 py-1 text-xs font-medium rounded badge-{{ finding.severity.value }}">
+                            {{ finding.severity.value.upper() }}
+                        </span>
+                        <span class="text-sm">{{ finding.name }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <script>
+            const ctx = document.getElementById('severityChart');
+            const data = {
+                labels: ['Critical', 'High', 'Medium', 'Low', 'Info'],
+                datasets: [{ data: [
+                    {{ findings|selectattr('severity', 'equalto', 'critical')|list|length }},
+                    {{ findings|selectattr('severity', 'equalto', 'high')|list|length }},
+                    {{ findings|selectattr('severity', 'equalto', 'medium')|list|length }},
+                    {{ findings|selectattr('severity', 'equalto', 'low')|list|length }},
+                    {{ findings|selectattr('severity', 'equalto', 'info')|list|length }}
+                ], backgroundColor: ['#dc2626', '#ea580c', '#d97706', '#2563eb', '#6b7280'] }]
+            };
+            new Chart(ctx, { type: 'doughnut', data: data, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } });
+        </script>
+        {% endif %}
+
+        <!-- Scope & Methodology -->
+        <div class="page-break"></div>
+        <h1 class="text-3xl font-bold border-b-2 border-gray-200 pb-2 mb-6">2. Scope & Methodology</h1>
+
+        <div class="bg-white p-6 rounded-lg shadow card mb-6">
+            <h2 class="text-xl font-semibold mb-4">2.1 Target Scope</h2>
+            <table class="w-full text-sm">
+                <tr><td class="font-medium w-1/3">Target Domain</td><td>{{ config.target }}</td></tr>
+                <tr><td class="font-medium">Scan Profile</td><td>{{ config.profile.value | title }}</td></tr>
+                <tr><td class="font-medium">Scan ID</td><td>{{ metadata.scan_id }}</td></tr>
+                <tr><td class="font-medium">Started</td><td>{{ metadata.started_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td></tr>
+                <tr><td class="font-medium">Completed</td><td>{{ metadata.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC') if metadata.completed_at else 'N/A' }}</td></tr>
+                <tr><td class="font-medium">Duration</td><td>{{ "%.1f"|format(metadata.duration_seconds or 0) }} seconds</td></tr>
+            </table>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow card mb-6">
+            <h2 class="text-xl font-semibold mb-4">2.2 Tools & Versions</h2>
+            <table class="w-full text-sm">
+                <thead><tr class="border-b"><th class="text-left">Tool</th><th class="text-left">Version</th></tr></thead>
+                <tbody>
+                    {% for tool, version in metadata.tools_versions.items() %}
+                    <tr><td class="font-mono">{{ tool }}</td><td>{{ version }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow card mb-6">
+            <h2 class="text-xl font-semibold mb-4">2.3 Methodology</h2>
+            <ol class="list-decimal list-inside space-y-2 text-sm">
+                <li><strong>Subdomain Enumeration:</strong> Multi-source (subfinder, amass, assetfinder, crt.sh) with deduplication</li>
+                <li><strong>Port & Service Detection:</strong> naabu for fast scanning, nmap for service versioning</li>
+                <li><strong>Technology Fingerprinting:</strong> httpx + Wappalyzer for stack identification</li>
+                <li><strong>Vulnerability Scanning:</strong> Nuclei with profile-based template selection</li>
+                <li><strong>Parameter Discovery:</strong> Katana, ParamSpider, Arjun for input vector identification</li>
+                <li><strong>Enrichment:</strong> WHOIS, DNS, SSL, Shodan, Censys (profile-dependent)</li>
+            </ol>
+        </div>
+
+        <!-- Findings -->
+        {% if findings %}
+        <div class="page-break"></div>
+        <h1 class="text-3xl font-bold border-b-2 border-gray-200 pb-2 mb-6">3. Findings</h1>
+
+        <div class="mb-6">
+            <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1 text-xs font-medium rounded badge-critical text-white">Critical</span>
+                <span class="px-3 py-1 text-xs font-medium rounded badge-high text-white">High</span>
+                <span class="px-3 py-1 text-xs font-medium rounded badge-medium text-white">Medium</span>
+                <span class="px-3 py-1 text-xs font-medium rounded badge-low text-white">Low</span>
+                <span class="px-3 py-1 text-xs font-medium rounded badge-info text-white">Info</span>
+            </div>
+        </div>
+
+        {% for finding in findings|sort(attribute='severity', reverse=true) %}
+        <div class="page-break card severity-{{ finding.severity.value }} bg-white p-6 rounded-lg shadow mb-6">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h2 class="text-xl font-semibold">{{ finding.name }}</h2>
+                    <span class="px-2 py-1 text-xs font-medium rounded badge-{{ finding.severity.value }} text-white ml-2">
+                        {{ finding.severity.value.upper() }}
+                    </span>
+                    {% if finding.cvss %}
+                    <span class="px-2 py-1 text-xs font-medium rounded bg-gray-200 text-gray-700 ml-2">
+                        CVSS: {{ finding.cvss }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="text-right text-sm text-gray-500">
+                    Template: {{ finding.template_id }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">
+                <div>
+                    <p class="font-medium text-gray-600">Location</p>
+                    <p class="font-mono text-gray-900">{{ finding.matched_at }}</p>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-600">Category</p>
+                    <p class="font-mono text-gray-900">{{ finding.tags|join(', ') if finding.tags else 'N/A' }}</p>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <p class="font-medium text-gray-600 mb-1">Description</p>
+                <p class="text-sm text-gray-800">{{ finding.description }}</p>
+            </div>
+
+            {% if finding.evidence %}
+            <div class="mb-4">
+                <p class="font-medium text-gray-600 mb-1">Evidence</p>
+                <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">{{ finding.evidence }}</pre>
+            </div>
+            {% endif %}
+
+            {% if finding.mitre_techniques %}
+            <div class="mb-4">
+                <p class="font-medium text-gray-600 mb-1">MITRE ATT&CK</p>
+                <div class="flex flex-wrap gap-1">
+                    {% for tech in finding.mitre_techniques %}
+                    <span class="px-2 py-1 text-xs bg-gray-100 rounded">{{ tech }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if finding.references %}
+            <div class="mb-4">
+                <p class="font-medium text-gray-600 mb-1">References</p>
+                <ul class="list-disc list-inside text-xs text-gray-700 space-y-1">
+                    {% for ref in finding.references %}
+                    <li><a href="{{ ref }}" target="_blank" class="underline hover:text-blue-600">{{ ref }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="bg-green-50 border border-green-200 p-6 rounded-lg card">
+            <h2 class="text-xl font-semibold text-green-800 mb-2">No Findings</h2>
+            <p class="text-green-700">No vulnerabilities were detected with the current scan profile.</p>
+        </div>
+        {% endif %}
+
+        <!-- Appendix -->
+        <div class="page-break"></div>
+        <h1 class="text-3xl font-bold border-b-2 border-gray-200 pb-2 mb-6">4. Appendix</h1>
+
+        <div class="bg-white p-6 rounded-lg shadow card mb-6">
+            <h2 class="text-xl font-semibold mb-4">4.1 Discovered Subdomains</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead><tr class="border-b"><th class="text-left">Subdomain</th><th class="text-left">Source</th><th class="text-left">Resolved</th><th class="text-left">IPs</th></tr></thead>
+                    <tbody>
+                        {% for sd in subdomains %}
+                        <tr>
+                            <td class="font-mono">{{ sd.name }}</td>
+                            <td>{{ sd.source }}</td>
+                            <td>{% if sd.resolved %}✓{% else %}✗{% endif %}</td>
+                            <td>{{ sd.ip_addresses|join(', ') if sd.ip_addresses else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow card mb-6">
+            <h2 class="text-xl font-semibold mb-4">4.2 Discovered Services</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead><tr class="border-b"><th class="text-left">Host</th><th class="text-left">Port</th><th class="text-left">Protocol</th><th class="text-left">Service</th><th class="text-left">Version</th></tr></thead>
+                    <tbody>
+                        {% for svc in services %}
+                        <tr>
+                            <td class="font-mono">{{ svc.host }}</td>
+                            <td>{{ svc.port }}</td>
+                            <td>{{ svc.protocol }}</td>
+                            <td>{{ svc.service or '—' }}</td>
+                            <td>{{ svc.version or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow card">
+            <h2 class="text-xl font-semibold mb-4">4.3 Identified Technologies</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead><tr class="border-b"><th class="text-left">URL</th><th class="text-left">Category</th><th class="text-left">Name</th><th class="text-left">Version</th><th class="text-left">Confidence</th></tr></thead>
+                    <tbody>
+                        {% for tech in technologies %}
+                        <tr>
+                            <td class="font-mono">{{ tech.url }}</td>
+                            <td>{{ tech.category }}</td>
+                            <td>{{ tech.name }}</td>
+                            <td>{{ tech.version or '—' }}</td>
+                            <td>{{ tech.confidence }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="page-break no-print"></div>
+        <div class="text-center text-sm text-gray-500 mt-12 pt-6 border-t">
+            <p>Generated by <strong>vapt-recon</strong> v0.1.0</p>
+            <p>{{ metadata.completed_at.strftime('%Y-%m-%d %H:%M UTC') if metadata.completed_at else 'N/A' }}</p>
+        </div>
+    </div>
+</body>
+</html>

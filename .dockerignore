@@ -1,0 +1,78 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/_build/
+
+# asciinema
+asciinema/
+
+# Reports (generated at runtime)
+reports/
+*.html
+*.pdf
+*.json
+
+# Checkpoints
+*.checkpoint*.json
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Docker
+Dockerfile*
+docker-compose*
+.docker/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Make
+Makefile
