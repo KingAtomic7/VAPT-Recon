@@ -17,6 +17,8 @@ ARG DNSX_VERSION=1.2.1
 ARG AMASS_VERSION=v4.2.0
 
 # Download and install from GitHub releases
+# Force cache bust with build arg
+ARG CACHE_BUST=1
 RUN set -ex; \
     arch=$(uname -m); \
     case $arch in \
