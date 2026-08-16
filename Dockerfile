@@ -1,27 +1,24 @@
 # Multi-stage Dockerfile for vapt-recon
-# Stage 1: Build essential Go tools (Go 1.22 - known compatible)
-FROM golang:1.22-alpine AS go-builder
+# Uses official ProjectDiscovery images for reliable tooling
 
+# Stage 1: Build Go tools using projectdiscovery base
+FROM projectdiscovery/subfinder:v2.14.0 AS subfinder
+FROM projectdiscovery/naabu:v2.3.0 AS naabu
+FROM projectdiscovery/nuclei:v3.3.7 AS nuclei
+FROM projectdiscovery/httpx:v1.6.8 AS httpx
+FROM projectdiscovery/katana:v1.1.0 AS katana
+FROM projectdiscovery/dnsx:v1.2.1 AS dnsx
+FROM owasp/amass:v4.2.0 AS amass
+
+# Stage 2: Build additional tools
+FROM golang:1.22-alpine AS go-tools
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
-
-# Install only essential ProjectDiscovery tools with versions known to work with Go 1.22
-RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0 \
-    && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0 \
-    && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7 \
-    && go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.8 \
-    && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.0 \
-    && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1
-
-# Install amass
-RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
-
-# Install other essential Go tools
 RUN go install -v github.com/tomnomnom/assetfinder@latest \
     && go install -v github.com/tomnomnom/waybackunique@latest \
     && go install -v github.com/lc/gau/v2/cmd/gau@latest \
     && go install -v github.com/hahwul/dalfox/v2@latest
 
-# Stage 2: Python runtime with tools
+# Stage 3: Python runtime with all tools
 FROM python:3.11-slim
 
 # Install system dependencies
@@ -39,10 +36,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Go binaries from builder
-COPY --from=go-builder /go/bin/* /usr/local/bin/
+# Copy tools from ProjectDiscovery images
+COPY --from=subfinder /usr/local/bin/subfinder /usr/local/bin/subfinder
+COPY --from=naabu /usr/local/bin/naabu /usr/local/bin/naabu
+COPY --from=nuclei /usr/local/bin/nuclei /usr/local/bin/nuclei
+COPY --from=httpx /usr/local/bin/httpx /usr/local/bin/httpx
+COPY --from=katana /usr/local/bin/katana /usr/local/bin/katana
+COPY --from=dnsx /usr/local/bin/dnsx /usr/local/bin/dnsx
+COPY --from=amass /usr/bin/amass /usr/local/bin/amass
 
-# Verify essential tools
+# Copy additional tools from go-tools
+COPY --from=go-tools /go/bin/* /usr/local/bin/
+
+# Verify tools
 RUN subfinder -version && naabu -version && nuclei -version && httpx -version
 
 # Create non-root user
