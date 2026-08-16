@@ -1,24 +1,24 @@
 # Multi-stage Dockerfile for vapt-recon
 # Stage 1: Build Go tools
-FROM golang:1.22-alpine AS go-builder
+FROM golang:1.23-alpine AS go-builder
 
 RUN apk add --no-cache git make gcc musl-dev
 
-# Install ProjectDiscovery tools
-RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest \
-    && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest \
-    && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest \
-    && go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest \
-    && go install -v github.com/projectdiscovery/katana/cmd/katana@latest \
-    && go install -v github.com/projectdiscovery/asnmap/cmd/asnmap@latest \
-    && go install -v github.com/projectdiscovery/alterx/cmd/alterx@latest \
-    && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest \
-    && go install -v github.com/projectdiscovery/tlsx/cmd/tlsx@latest \
-    && go install -v github.com/projectdiscovery/uncover/cmd/uncover@latest \
-    && go install -v github.com/projectdiscovery/cover/cmd/cover@latest
+# Install ProjectDiscovery tools (pinned to versions compatible with Go 1.23)
+RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0 \
+    && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0 \
+    && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7 \
+    && go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.8 \
+    && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.0 \
+    && go install -v github.com/projectdiscovery/asnmap/cmd/asnmap@v1.1.0 \
+    && go install -v github.com/projectdiscovery/alterx/cmd/alterx@v1.0.1 \
+    && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1 \
+    && go install -v github.com/projectdiscovery/tlsx/cmd/tlsx@v1.1.4 \
+    && go install -v github.com/projectdiscovery/uncover/cmd/uncover@v1.0.4 \
+    && go install -v github.com/projectdiscovery/cover/cmd/cover@v1.0.2
 
 # Install amass
-RUN go install -v github.com/owasp-amass/amass/v4/...@latest
+RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
 
 # Install other Go tools
 RUN go install -v github.com/tomnomnom/assetfinder@latest \
