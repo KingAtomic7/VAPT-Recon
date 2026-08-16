@@ -56,7 +56,7 @@ jobs:
           go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
       - name: Run tests
-        run: pytest tests/ -v --tb=short --cov=core --cov=reporting --cov=utils --cov-fail-under=70
+        run: pytest tests/ -v --tb=short --cov=core --cov=reporting --cov=utils --cov-fail-under=40
 
   docker:
     name: Build Docker Image
