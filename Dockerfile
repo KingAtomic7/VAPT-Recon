@@ -1,24 +1,64 @@
 # Multi-stage Dockerfile for vapt-recon
-# Debian-based Go builder (better CGO support for libpcap/naabu)
+# Download pre-built binaries from GitHub releases (no Go compilation)
 
-# Stage 1: Build all Go tools from source
-FROM golang:1.22-bookworm AS go-builder
+# Stage 1: Download all tool binaries
+FROM alpine:3.20 AS tool-downloader
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git make gcc libpcap-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl tar gzip unzip
 
-# Set Go proxy for module downloads
-ENV GOPROXY=https://proxy.golang.org,direct
+# Tool versions (pinned to known working releases with GitHub releases)
+ARG SUBFINDER_VERSION=v2.14.0
+ARG NAABU_VERSION=v2.3.0
+ARG NUCLEI_VERSION=v3.11.1
+ARG HTTPX_VERSION=v1.6.10
+ARG KATANA_VERSION=v1.1.3
+ARG DNSX_VERSION=v1.2.1
+ARG AMASS_VERSION=v4.2.0
 
-# Install tools with separated RUN commands for isolation
-RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
-RUN go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
-RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
-RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
-RUN go install -v github.com/projectdiscovery/katana/cmd/katana@latest
-RUN go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest
-RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
+# Download and install from GitHub releases
+RUN set -ex; \
+    arch=$(uname -m); \
+    case $arch in \
+        x86_64) GOARCH=amd64 ;; \
+        aarch64) GOARCH=arm64 ;; \
+        *) echo "Unsupported arch: $arch"; exit 1 ;; \
+    esac; \
+    \
+    # subfinder
+    curl -sSL "https://github.com/projectdiscovery/subfinder/releases/download/${SUBFINDER_VERSION}/subfinder_${SUBFINDER_VERSION#v}_linux_${GOARCH}.zip" -o /tmp/subfinder.zip \
+    && unzip -o /tmp/subfinder.zip -d /usr/local/bin/ subfinder \
+    && rm /tmp/subfinder.zip; \
+    \
+    # naabu
+    curl -sSL "https://github.com/projectdiscovery/naabu/releases/download/${NAABU_VERSION}/naabu_${NAABU_VERSION#v}_linux_${GOARCH}.zip" -o /tmp/naabu.zip \
+    && unzip -o /tmp/naabu.zip -d /usr/local/bin/ naabu \
+    && rm /tmp/naabu.zip; \
+    \
+    # nuclei
+    curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION#v}_linux_${GOARCH}.zip" -o /tmp/nuclei.zip \
+    && unzip -o /tmp/nuclei.zip -d /usr/local/bin/ nuclei \
+    && rm /tmp/nuclei.zip; \
+    \
+    # httpx
+    curl -sSL "https://github.com/projectdiscovery/httpx/releases/download/${HTTPX_VERSION}/httpx_${HTTPX_VERSION#v}_linux_${GOARCH}.zip" -o /tmp/httpx.zip \
+    && unzip -o /tmp/httpx.zip -d /usr/local/bin/ httpx \
+    && rm /tmp/httpx.zip; \
+    \
+    # katana
+    curl -sSL "https://github.com/projectdiscovery/katana/releases/download/${KATANA_VERSION}/katana_${KATANA_VERSION#v}_linux_${GOARCH}.zip" -o /tmp/katana.zip \
+    && unzip -o /tmp/katana.zip -d /usr/local/bin/ katana \
+    && rm /tmp/katana.zip; \
+    \
+    # dnsx
+    curl -sSL "https://github.com/projectdiscovery/dnsx/releases/download/${DNSX_VERSION}/dnsx_${DNSX_VERSION#v}_linux_${GOARCH}.zip" -o /tmp/dnsx.zip \
+    && unzip -o /tmp/dnsx.zip -d /usr/local/bin/ dnsx \
+    && rm /tmp/dnsx.zip; \
+    \
+    # amass
+    curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_linux_${GOARCH}.zip" -o /tmp/amass.zip \
+    && unzip -o /tmp/amass.zip -d /tmp/amass/ \
+    && mv /tmp/amass/amass /usr/local/bin/ \
+    && rm -rf /tmp/amass.zip /tmp/amass
 
 # Stage 2: Python runtime with tools
 FROM python:3.11-slim
@@ -37,10 +77,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     shared-mime-info \
     libpcap0.8 \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Go binaries from builder
-COPY --from=go-builder /go/bin/* /usr/local/bin/
+# Copy all binaries from downloader
+COPY --from=tool-downloader /usr/local/bin/* /usr/local/bin/
 
 # Verify tools
 RUN subfinder -version && naabu -version && nuclei -version && httpx -version
