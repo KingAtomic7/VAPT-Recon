@@ -173,8 +173,6 @@ vapt-recon/
 ├── pyproject.toml            # Modern Python packaging
 ├── Dockerfile                # Multi-stage build
 ├── Makefile                  # Dev convenience
-├── generate_screenshots.py   # HTML report screenshot generator
-├── generate_terminal_demo.py # Terminal demo screenshot generator
 ├── .pre-commit-config.yaml   # Pre-commit hooks
 ├── .dockerignore             # Docker ignore rules
 ├── .github/
@@ -182,8 +180,6 @@ vapt-recon/
 │       ├── ci.yml            # Main CI pipeline
 │       ├── scheduled-scan.yml # Weekly scheduled scans
 │       └── release.yml       # Automated releases
-├── asciinema/
-│   └── demo.cast             # Terminal demo recording
 ├── config/
 │   ├── __init__.py
 │   ├── profiles.yaml         # Scan profiles
