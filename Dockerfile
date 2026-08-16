@@ -39,7 +39,7 @@ RUN . /tmp/arch.txt && DX_VER=${DNSX_VERSION#v} && curl -sSL "https://github.com
 
 # amass v5.1.1 uses .tar.gz format
 ARG AMASS_VERSION=v5.1.1
-RUN . /tmp/arch.txt && curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_linux_${GOARCH}.tar.gz" -o /tmp/amass.tar.gz && tar -xzf /tmp/amass.tar.gz -C /tmp/amass/ && mv /tmp/amass/amass /usr/local/bin/ && rm -rf /tmp/amass.tar.gz /tmp/amass
+RUN . /tmp/arch.txt && curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_linux_${GOARCH}.tar.gz" -o /tmp/amass.tar.gz && mkdir -p /tmp/amass && tar -xzf /tmp/amass.tar.gz -C /tmp/amass/ && mv /tmp/amass/amass /usr/local/bin/ && rm -rf /tmp/amass.tar.gz /tmp/amass
 
 # Stage 2: Python runtime with tools
 FROM python:3.11-slim
