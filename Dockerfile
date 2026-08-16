@@ -4,8 +4,8 @@
 # Stage 1: Use official ProjectDiscovery images (available on Docker Hub)
 FROM projectdiscovery/subfinder:v2.14.0 AS subfinder
 FROM projectdiscovery/naabu:v2.3.0 AS naabu
-FROM projectdiscovery/nuclei:v3.3.7 AS nuclei
-FROM projectdiscovery/httpx:v1.6.8 AS httpx
+FROM projectdiscovery/nuclei:v3.11.1 AS nuclei
+FROM projectdiscovery/httpx:v1.6.10 AS httpx
 FROM projectdiscovery/dnsx:v1.2.1 AS dnsx
 
 # Stage 2: Build remaining tools from source (Go 1.22)
