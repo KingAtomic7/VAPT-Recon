@@ -1,19 +1,19 @@
 # Multi-stage Dockerfile for vapt-recon
-# Single Go builder stage for reliability
+# Single Go builder stage with separated installs (Go 1.21 - stable)
 
 # Stage 1: Build all Go tools from source
-FROM golang:1.23-alpine AS go-builder
+FROM golang:1.21-alpine AS go-builder
 
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
 
-# Install all tools with known working versions
-RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0 \
-    && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0 \
-    && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1 \
-    && go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.10 \
-    && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.3 \
-    && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1 \
-    && go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
+# Install tools with separated RUN commands for isolation
+RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0
+RUN go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0
+RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
+RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.10
+RUN go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.3
+RUN go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1
+RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
 
 # Stage 2: Python runtime with tools
 FROM python:3.11-slim
