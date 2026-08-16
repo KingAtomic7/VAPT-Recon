@@ -2,7 +2,7 @@
 # Stage 1: Build Go tools
 FROM golang:1.24-alpine AS go-builder
 
-RUN apk add --no-cache git make gcc musl-dev
+RUN apk add --no-cache git make gcc musl-dev libpcap-dev
 
 # Install ProjectDiscovery tools (compatible with Go 1.24)
 RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0 \
