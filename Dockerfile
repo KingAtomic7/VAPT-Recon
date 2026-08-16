@@ -1,10 +1,13 @@
 # Multi-stage Dockerfile for vapt-recon
-# Single Go builder stage with separated installs (Go 1.21 - stable)
+# Single Go builder stage with GOPROXY (Go 1.22)
 
 # Stage 1: Build all Go tools from source
-FROM golang:1.21-alpine AS go-builder
+FROM golang:1.22-alpine AS go-builder
 
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
+
+# Set Go proxy for module downloads
+ENV GOPROXY=https://proxy.golang.org,direct
 
 # Install tools with separated RUN commands for isolation
 RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
