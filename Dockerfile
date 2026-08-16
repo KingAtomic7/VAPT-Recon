@@ -11,7 +11,7 @@ RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0
     && go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.8 \
     && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.0 \
     && go install -v github.com/projectdiscovery/asnmap/cmd/asnmap@v1.1.0 \
-    && go install -v github.com/projectdiscovery/alterx/cmd/alterx@v1.0.1 \
+    && go install -v github.com/projectdiscovery/alterx/cmd/alterx@latest \
     && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1 \
     && go install -v github.com/projectdiscovery/tlsx/cmd/tlsx@v1.1.4 \
     && go install -v github.com/projectdiscovery/uncover/cmd/uncover@v1.0.4 \
