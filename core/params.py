@@ -1,18 +1,19 @@
 """Parameter discovery and fuzzing module."""
 
 import asyncio
+import contextlib
+import json
 import tempfile
 from pathlib import Path
-from typing import Any
 
-import httpx
-
-from core.models import Finding, ReconConfig, Technology, Severity
+from core.models import Finding, ReconConfig, Severity, Technology
 from utils.dedupe import merge_findings
 from utils.rate_limit import get_limiter
 
 
-async def _run_katana(targets: list[str], config: ReconConfig, limiter, profile_config: dict) -> list[str]:
+async def _run_katana(
+    targets: list[str], config: ReconConfig, limiter, profile_config: dict
+) -> list[str]:
     """Run katana for crawling and URL discovery."""
     urls = []
     params_config = profile_config.get("params", {})
@@ -21,37 +22,38 @@ async def _run_katana(targets: list[str], config: ReconConfig, limiter, profile_
     if not targets:
         return urls
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-        f.write('\n'.join(targets))
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("\n".join(targets))
         targets_file = f.name
 
     try:
         await limiter.acquire("katana", rate=20)
         proc = await asyncio.create_subprocess_exec(
             "katana",
-            "-list", targets_file,
+            "-list",
+            targets_file,
             "-silent",
             "-jc",  # JavaScript crawling
             "-kf",  # known-files
-            "-rl", "10",  # rate limit
-            "-d", "3",    # depth
-            "-o", "/dev/stdout",
+            "-rl",
+            "10",  # rate limit
+            "-d",
+            "3",  # depth
+            "-o",
+            "/dev/stdout",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
 
-        for line in stdout.decode().strip().split('\n'):
+        for line in stdout.decode().strip().split("\n"):
             if line and len(urls) < max_urls:
                 urls.append(line.strip())
-    except (FileNotFoundError, asyncio.TimeoutError, Exception):
+    except (TimeoutError, FileNotFoundError, Exception):
         pass
     finally:
-        import os
-        try:
-            os.unlink(targets_file)
-        except Exception:
-            pass
+        with contextlib.suppress(Exception):
+            Path(targets_file).unlink()
 
     return urls
 
@@ -66,16 +68,20 @@ async def _run_paramspider(targets: list[str], config: ReconConfig, limiter) -> 
         try:
             await limiter.acquire("paramspider", rate=10)
             proc = await asyncio.create_subprocess_exec(
-                "paramspider", "-d", target, "-o", "/dev/stdout",
+                "paramspider",
+                "-d",
+                target,
+                "-o",
+                "/dev/stdout",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+            stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
 
-            for line in stdout.decode().strip().split('\n'):
+            for line in stdout.decode().strip().split("\n"):
                 if line and "=" in line:
                     urls.append(line.strip())
-        except (FileNotFoundError, asyncio.TimeoutError, Exception):
+        except (TimeoutError, FileNotFoundError, Exception):
             pass
     return urls
 
@@ -86,35 +92,40 @@ async def _run_arjun(urls: list[str], config: ReconConfig, limiter) -> list[str]
     if not urls:
         return discovered
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-        f.write('\n'.join(urls[:50]))
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("\n".join(urls[:50]))
         urls_file = f.name
 
     try:
         await limiter.acquire("arjun", rate=10)
         proc = await asyncio.create_subprocess_exec(
-            "arjun", "-i", urls_file, "-o", "/dev/stdout", "-t", "20",
+            "arjun",
+            "-i",
+            urls_file,
+            "-o",
+            "/dev/stdout",
+            "-t",
+            "20",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=180)
+        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=180)
 
-        for line in stdout.decode().strip().split('\n'):
+        for line in stdout.decode().strip().split("\n"):
             if line and line.startswith("http"):
                 discovered.append(line.strip())
-    except (FileNotFoundError, asyncio.TimeoutError, Exception):
+    except (TimeoutError, FileNotFoundError, Exception):
         pass
     finally:
-        import os
-        try:
-            os.unlink(urls_file)
-        except Exception:
-            pass
+        with contextlib.suppress(Exception):
+            Path(urls_file).unlink()
 
     return discovered
 
 
-async def _fuzz_parameters(urls: list[str], config: ReconConfig, limiter, profile_config: dict) -> list[Finding]:
+async def _fuzz_parameters(
+    urls: list[str], config: ReconConfig, limiter, profile_config: dict
+) -> list[Finding]:
     """Fuzz discovered parameters with nuclei fuzzing templates."""
     findings = []
     params_config = profile_config.get("params", {})
@@ -123,18 +134,21 @@ async def _fuzz_parameters(urls: list[str], config: ReconConfig, limiter, profil
     if not urls:
         return findings
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-        f.write('\n'.join(urls[:100]))
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("\n".join(urls[:100]))
         urls_file = f.name
 
     try:
         args = [
             "nuclei",
-            "-l", urls_file,
-            "-t", fuzz_templates,
+            "-l",
+            urls_file,
+            "-t",
+            fuzz_templates,
             "-json",
             "-silent",
-            "-rate-limit", "50",
+            "-rate-limit",
+            "50",
         ]
 
         await limiter.acquire("nuclei-fuzz", rate=50)
@@ -143,9 +157,9 @@ async def _fuzz_parameters(urls: list[str], config: ReconConfig, limiter, profil
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
 
-        for line in stdout.decode().strip().split('\n'):
+        for line in stdout.decode().strip().split("\n"):
             if line:
                 try:
                     data = json.loads(line)
@@ -155,7 +169,9 @@ async def _fuzz_parameters(urls: list[str], config: ReconConfig, limiter, profil
                     finding = Finding(
                         template_id=data.get("template-id", ""),
                         name=info.get("name", "Parameter Fuzzing"),
-                        severity=Severity(severity_str) if severity_str in Severity._value2member_map_ else Severity.INFO,
+                        severity=Severity(severity_str)
+                        if severity_str in Severity._value2member_map_
+                        else Severity.INFO,
                         cvss=info.get("cvss"),
                         description=info.get("description", ""),
                         matched_at=data.get("matched-at", ""),
@@ -166,14 +182,11 @@ async def _fuzz_parameters(urls: list[str], config: ReconConfig, limiter, profil
                     findings.append(finding)
                 except (json.JSONDecodeError, ValueError):
                     continue
-    except (FileNotFoundError, asyncio.TimeoutError, Exception):
+    except (TimeoutError, FileNotFoundError, Exception):
         pass
     finally:
-        import os
-        try:
-            os.unlink(urls_file)
-        except Exception:
-            pass
+        with contextlib.suppress(Exception):
+            Path(urls_file).unlink()
 
     return findings
 
@@ -181,7 +194,7 @@ async def _fuzz_parameters(urls: list[str], config: ReconConfig, limiter, profil
 async def run_param_discovery(technologies: list[Technology], config: ReconConfig) -> list[Finding]:
     """Run parameter discovery and fuzzing."""
     limiter = get_limiter(config.rate_limit)
-    profile_config = getattr(config, '_profile_config', {})
+    profile_config = getattr(config, "_profile_config", {})
 
     params_config = profile_config.get("params", {})
     if not params_config.get("enabled", False):

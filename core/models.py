@@ -2,32 +2,36 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
-class Profile(str, Enum):
+class Profile(StrEnum):
     """Scan profile enumeration."""
+
     QUICK = "quick"
     STANDARD = "standard"
     DEEP = "deep"
     COMPLIANCE = "compliance"
 
 
-class ReportFormat(str, Enum):
+class ReportFormat(StrEnum):
     """Report output format."""
+
     HTML = "html"
     PDF = "pdf"
     JSON = "json"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """Finding severity levels."""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -37,21 +41,23 @@ class Severity(str, Enum):
 
 class Subdomain(BaseModel):
     """Discovered subdomain."""
+
     name: str
     source: str
     resolved: bool = False
     ip_addresses: list[str] = Field(default_factory=list)
-    cname: Optional[str] = None
+    cname: str | None = None
     discovered_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class PortService(BaseModel):
     """Open port with service information."""
+
     host: str
     port: int
     protocol: Literal["tcp", "udp"] = "tcp"
-    service: Optional[str] = None
-    version: Optional[str] = None
+    service: str | None = None
+    version: str | None = None
     state: Literal["open", "filtered", "closed"] = "open"
     source: str = "naabu"
     discovered_at: datetime = Field(default_factory=datetime.utcnow)
@@ -59,10 +65,11 @@ class PortService(BaseModel):
 
 class Technology(BaseModel):
     """Identified technology."""
+
     url: str
     category: str  # cms, framework, language, server, cdn, waf, analytics, etc.
     name: str
-    version: Optional[str] = None
+    version: str | None = None
     confidence: int = 100  # 0-100
     source: str = "httpx"
     discovered_at: datetime = Field(default_factory=datetime.utcnow)
@@ -70,44 +77,47 @@ class Technology(BaseModel):
 
 class Finding(BaseModel):
     """Vulnerability finding."""
+
     id: str = Field(default_factory=lambda: str(uuid4())[:8])
     template_id: str
     name: str
     severity: Severity
-    cvss: Optional[float] = None
+    cvss: float | None = None
     description: str
     matched_at: str  # URL or host:port
-    evidence: Optional[str] = None
-    extraction: Optional[str] = None
+    evidence: str | None = None
+    extraction: str | None = None
     references: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     mitre_techniques: list[str] = Field(default_factory=list)
-    cwe: Optional[str] = None
+    cwe: str | None = None
     discovered_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ScanMetadata(BaseModel):
     """Scan execution metadata."""
+
     scan_id: str = Field(default_factory=lambda: str(uuid4())[:8])
     target: str
     profile: Profile
     started_at: datetime = Field(default_factory=datetime.utcnow)
-    completed_at: Optional[datetime] = None
-    duration_seconds: Optional[float] = None
+    completed_at: datetime | None = None
+    duration_seconds: float | None = None
     tools_versions: dict[str, str] = Field(default_factory=dict)
     config_snapshot: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReconConfig(BaseModel):
     """Reconciliation scan configuration."""
+
     target: str
     profile: Profile = Profile.STANDARD
     report_formats: list[ReportFormat] = [ReportFormat.HTML]
     output_dir: Path = Path("./reports")
     rate_limit: int = 100
     resume: bool = False
-    config_path: Optional[Path] = None
-    checkpoint_file: Optional[Path] = None
+    config_path: Path | None = None
+    checkpoint_file: Path | None = None
 
     def model_post_init(self, __context: Any) -> None:
         self.output_dir = Path(self.output_dir)
@@ -118,6 +128,7 @@ class ReconConfig(BaseModel):
 
 class ScanResult(BaseModel):
     """Complete scan result."""
+
     config: ReconConfig
     metadata: ScanMetadata
     subdomains: list[Subdomain] = Field(default_factory=list)
@@ -128,5 +139,4 @@ class ScanResult(BaseModel):
 
     def summary(self) -> dict[str, int]:
         """Return finding counts by severity."""
-        from collections import Counter
         return dict(Counter(f.severity.value for f in self.findings))

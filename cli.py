@@ -2,20 +2,22 @@
 """vapt-recon: Automated VAPT Reconnaissance Pipeline"""
 
 import asyncio
-import json
 import sys
+from collections import Counter
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.table import Table
 
+from config.profiles import load_profiles
 from core.models import (
-    ReconConfig, Profile, ReportFormat, ScanResult,
-    Subdomain, PortService, Technology, Finding
+    Profile,
+    ReconConfig,
+    ReportFormat,
+    ScanResult,
 )
 from core.recon import run_recon
 from reporting import generate_reports
@@ -38,12 +40,32 @@ def version_callback(value: bool) -> None:
 @app.callback()
 def main(
     version: Annotated[
-        Optional[bool],
+        bool | None,
         typer.Option("--version", "-v", callback=version_callback, help="Show version"),
     ] = None,
 ) -> None:
     """Automated VAPT reconnaissance & vulnerability scanning pipeline."""
-    pass
+
+
+def _build_scan_config(
+    target: str,
+    profile: Profile,
+    report: list[ReportFormat] | None,
+    output: Path,
+    rate_limit: int,
+    resume: bool,
+    config_file: Path | None,
+) -> ReconConfig:
+    """Build ReconConfig from scan parameters."""
+    return ReconConfig(
+        target=target,
+        profile=profile,
+        report_formats=report or [ReportFormat.HTML],
+        output_dir=output,
+        rate_limit=rate_limit,
+        resume=resume,
+        config_path=config_file,
+    )
 
 
 @app.command()
@@ -54,9 +76,9 @@ def scan(
         typer.Option("--profile", "-p", help="Scan profile", case_sensitive=False),
     ] = Profile.STANDARD,
     report: Annotated[
-        list[ReportFormat],
+        list[ReportFormat] | None,
         typer.Option("--report", "-r", help="Report formats"),
-    ] = [ReportFormat.HTML],
+    ] = None,
     output: Annotated[
         Path,
         typer.Option("--output", "-o", help="Output directory"),
@@ -70,32 +92,26 @@ def scan(
         typer.Option("--resume", help="Resume from last checkpoint"),
     ] = False,
     config_file: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--config", "-c", help="Custom profiles YAML"),
     ] = None,
 ) -> None:
     """Run reconnaissance scan on target domain."""
-    config = ReconConfig(
-        target=target,
-        profile=profile,
-        report_formats=report,
-        output_dir=output,
-        rate_limit=rate_limit,
-        resume=resume,
-        config_path=config_file,
-    )
+    config = _build_scan_config(target, profile, report, output, rate_limit, resume, config_file)
 
-    console.print(Panel.fit(
-        f"[bold cyan]vapt-recon[/bold cyan] - {profile.value.upper()} scan\n"
-        f"Target: [bold]{target}[/bold]\n"
-        f"Reports: {', '.join(r.value for r in report)}",
-        title="Starting Scan",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold cyan]vapt-recon[/bold cyan] - {profile.value.upper()} scan\n"
+            f"Target: [bold]{target}[/bold]\n"
+            f"Reports: {', '.join(r.value for r in config.report_formats)}",
+            title="Starting Scan",
+            border_style="cyan",
+        )
+    )
 
     try:
         result = asyncio.run(run_recon(config))
-        generate_reports(config, result)
+        asyncio.run(generate_reports(config, result))
         _print_summary(result)
     except KeyboardInterrupt:
         console.print("\n[yellow]Scan interrupted by user[/yellow]")
@@ -108,12 +124,11 @@ def scan(
 @app.command()
 def profiles(
     config_file: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--config", "-c", help="Custom profiles YAML"),
     ] = None,
 ) -> None:
     """List available scan profiles."""
-    from config.profiles import load_profiles
     profiles_data = load_profiles(config_file)
 
     table = Table(title="Available Scan Profiles")
@@ -143,13 +158,12 @@ def validate(
     ],
 ) -> None:
     """Validate profiles configuration."""
-    from config.profiles import load_profiles
     try:
         load_profiles(config_file)
         console.print("[green]✓ Configuration valid[/green]")
     except Exception as e:
         console.print(f"[red]Invalid config: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 def _print_summary(result: ScanResult) -> None:
@@ -164,7 +178,6 @@ def _print_summary(result: ScanResult) -> None:
     table.add_row("Findings", str(len(result.findings)))
 
     if result.findings:
-        from collections import Counter
         sev_counts = Counter(f.severity.value for f in result.findings)
         for sev in ["critical", "high", "medium", "low", "info"]:
             if sev_counts.get(sev, 0) > 0:

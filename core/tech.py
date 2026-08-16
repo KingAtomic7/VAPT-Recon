@@ -2,18 +2,29 @@
 
 import asyncio
 import json
-from typing import Any
-
-import httpx
 
 from core.models import PortService, ReconConfig, Technology
 from utils.dedupe import merge_technologies
 from utils.rate_limit import get_limiter
 
-
 _TECH_CATEGORIES = {
     "cms": ["wordpress", "drupal", "joomla", "magento", "shopify", "wix", "squarespace"],
-    "framework": ["react", "vue", "angular", "next.js", "nuxt", "svelte", "django", "flask", "fastapi", "express", "spring", "laravel", "rails", "asp.net"],
+    "framework": [
+        "react",
+        "vue",
+        "angular",
+        "next.js",
+        "nuxt",
+        "svelte",
+        "django",
+        "flask",
+        "fastapi",
+        "express",
+        "spring",
+        "laravel",
+        "rails",
+        "asp.net",
+    ],
     "language": ["php", "python", "node.js", "java", "go", "ruby", "asp.net"],
     "server": ["nginx", "apache", "iis", "lighttpd", "openresty", "caddy"],
     "cdn": ["cloudflare", "akamai", "fastly", "cloudfront", "maxcdn", "keycdn"],
@@ -46,21 +57,30 @@ async def _run_httpx(services: list[PortService], config: ReconConfig, limiter) 
 
     # Write URLs to temp file for httpx
     import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-        f.write('\n'.join(urls))
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("\n".join(urls))
         urls_file = f.name
 
     try:
         await limiter.acquire("httpx", rate=50)
         proc = await asyncio.create_subprocess_exec(
-            "httpx", "-l", urls_file, "-json", "-tech-detect", "-status-code", "-title",
-            "-web-server", "-cdn", "-waf",
+            "httpx",
+            "-l",
+            urls_file,
+            "-json",
+            "-tech-detect",
+            "-status-code",
+            "-title",
+            "-web-server",
+            "-cdn",
+            "-waf",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
 
-        for line in stdout.decode().strip().split('\n'):
+        for line in stdout.decode().strip().split("\n"):
             if line:
                 try:
                     data = json.loads(line)
@@ -71,43 +91,52 @@ async def _run_httpx(services: list[PortService], config: ReconConfig, limiter) 
                     waf = data.get("waf", "")
 
                     for tech_name in tech_list:
-                        technologies.append(Technology(
-                            url=url,
-                            category=_categorize_tech(tech_name),
-                            name=tech_name,
-                            source="httpx",
-                            confidence=90,
-                        ))
+                        technologies.append(
+                            Technology(
+                                url=url,
+                                category=_categorize_tech(tech_name),
+                                name=tech_name,
+                                source="httpx",
+                                confidence=90,
+                            )
+                        )
                     if webserver:
-                        technologies.append(Technology(
-                            url=url,
-                            category="server",
-                            name=webserver,
-                            source="httpx",
-                            confidence=95,
-                        ))
+                        technologies.append(
+                            Technology(
+                                url=url,
+                                category="server",
+                                name=webserver,
+                                source="httpx",
+                                confidence=95,
+                            )
+                        )
                     if cdn:
-                        technologies.append(Technology(
-                            url=url,
-                            category="cdn",
-                            name=cdn,
-                            source="httpx",
-                            confidence=90,
-                        ))
+                        technologies.append(
+                            Technology(
+                                url=url,
+                                category="cdn",
+                                name=cdn,
+                                source="httpx",
+                                confidence=90,
+                            )
+                        )
                     if waf:
-                        technologies.append(Technology(
-                            url=url,
-                            category="waf",
-                            name=waf,
-                            source="httpx",
-                            confidence=85,
-                        ))
+                        technologies.append(
+                            Technology(
+                                url=url,
+                                category="waf",
+                                name=waf,
+                                source="httpx",
+                                confidence=85,
+                            )
+                        )
                 except json.JSONDecodeError:
                     continue
-    except (FileNotFoundError, asyncio.TimeoutError, Exception):
+    except (TimeoutError, FileNotFoundError, Exception):
         pass
     finally:
         import os
+
         try:
             os.unlink(urls_file)
         except Exception:
@@ -116,7 +145,9 @@ async def _run_httpx(services: list[PortService], config: ReconConfig, limiter) 
     return technologies
 
 
-async def _run_wappalyzer(services: list[PortService], config: ReconConfig, limiter) -> list[Technology]:
+async def _run_wappalyzer(
+    services: list[PortService], config: ReconConfig, limiter
+) -> list[Technology]:
     """Run Wappalyzer CLI for technology detection."""
     technologies = []
     urls = []
@@ -128,39 +159,45 @@ async def _run_wappalyzer(services: list[PortService], config: ReconConfig, limi
         return technologies
 
     import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-        f.write('\n'.join(urls))
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("\n".join(urls))
         urls_file = f.name
 
     try:
         await limiter.acquire("wappalyzer", rate=20)
         proc = await asyncio.create_subprocess_exec(
-            "wappalyzer", "-i", urls_file,
+            "wappalyzer",
+            "-i",
+            urls_file,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
 
-        for line in stdout.decode().strip().split('\n'):
+        for line in stdout.decode().strip().split("\n"):
             if line:
                 try:
                     data = json.loads(line)
                     url = data.get("url", "")
                     for tech in data.get("technologies", []):
-                        technologies.append(Technology(
-                            url=url,
-                            category=_categorize_tech(tech.get("name", "")),
-                            name=tech.get("name", ""),
-                            version=tech.get("version"),
-                            confidence=tech.get("confidence", 80),
-                            source="wappalyzer",
-                        ))
+                        technologies.append(
+                            Technology(
+                                url=url,
+                                category=_categorize_tech(tech.get("name", "")),
+                                name=tech.get("name", ""),
+                                version=tech.get("version"),
+                                confidence=tech.get("confidence", 80),
+                                source="wappalyzer",
+                            )
+                        )
                 except json.JSONDecodeError:
                     continue
-    except (FileNotFoundError, asyncio.TimeoutError, Exception):
+    except (TimeoutError, FileNotFoundError, Exception):
         pass
     finally:
         import os
+
         try:
             os.unlink(urls_file)
         except Exception:
@@ -169,10 +206,12 @@ async def _run_wappalyzer(services: list[PortService], config: ReconConfig, limi
     return technologies
 
 
-async def run_tech_fingerprint(services: list[PortService], config: ReconConfig) -> list[Technology]:
+async def run_tech_fingerprint(
+    services: list[PortService], config: ReconConfig
+) -> list[Technology]:
     """Run technology fingerprinting on discovered services."""
     limiter = get_limiter(config.rate_limit)
-    profile_config = getattr(config, '_profile_config', {})
+    profile_config = getattr(config, "_profile_config", {})
 
     tools = profile_config.get("tech", {}).get("tools", ["httpx"])
 

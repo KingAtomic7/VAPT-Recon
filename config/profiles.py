@@ -7,7 +7,6 @@ import yaml
 
 from core.models import Profile
 
-
 DEFAULT_PROFILES_PATH = Path(__file__).parent / "profiles.yaml"
 
 
@@ -17,7 +16,7 @@ def load_profiles(config_path: Path | None = None) -> dict[str, dict[str, Any]]:
     if not path.exists():
         raise FileNotFoundError(f"Profiles config not found: {path}")
 
-    with open(path) as f:
+    with path.open() as f:
         data = yaml.safe_load(f)
 
     return data.get("profiles", {})
@@ -35,6 +34,6 @@ def get_profile(profile: Profile, config_path: Path | None = None) -> dict[str, 
 def get_global_config(config_path: Path | None = None) -> dict[str, Any]:
     """Get global configuration."""
     path = config_path or DEFAULT_PROFILES_PATH
-    with open(path) as f:
+    with path.open() as f:
         data = yaml.safe_load(f)
     return data.get("global", {})

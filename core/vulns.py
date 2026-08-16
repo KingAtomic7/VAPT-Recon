@@ -4,12 +4,10 @@ import asyncio
 import json
 import tempfile
 from pathlib import Path
-from typing import Any
 
-from core.models import Finding, ReconConfig, Technology, Severity
-from utils.dedupe import merge_findings, finding_fingerprint
+from core.models import Finding, ReconConfig, Severity, Technology
+from utils.dedupe import merge_findings
 from utils.rate_limit import get_limiter
-
 
 _SEVERITY_MAP = {
     "critical": Severity.CRITICAL,
@@ -34,7 +32,9 @@ def _extract_mitre_techniques(tags: list[str]) -> list[str]:
     return techniques
 
 
-async def _run_nuclei(targets: list[str], config: ReconConfig, limiter, profile_config: dict) -> list[Finding]:
+async def _run_nuclei(
+    targets: list[str], config: ReconConfig, limiter, profile_config: dict
+) -> list[Finding]:
     """Run nuclei vulnerability scanner."""
     findings = []
     vuln_config = profile_config.get("vulns", {}).get("nuclei", {})
@@ -50,18 +50,21 @@ async def _run_nuclei(targets: list[str], config: ReconConfig, limiter, profile_
         return findings
 
     # Write targets to temp file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-        f.write('\n'.join(targets))
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("\n".join(targets))
         targets_file = f.name
 
     try:
         args = [
             "nuclei",
-            "-l", targets_file,
+            "-l",
+            targets_file,
             "-json",
             "-silent",
-            "-rate-limit", str(rate_limit),
-            "-severity", ",".join(severity),
+            "-rate-limit",
+            str(rate_limit),
+            "-severity",
+            ",".join(severity),
         ]
 
         if tags:
@@ -84,7 +87,7 @@ async def _run_nuclei(targets: list[str], config: ReconConfig, limiter, profile_
         )
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=600)
 
-        for line in stdout.decode().strip().split('\n'):
+        for line in stdout.decode().strip().split("\n"):
             if line:
                 try:
                     data = json.loads(line)
@@ -98,7 +101,8 @@ async def _run_nuclei(targets: list[str], config: ReconConfig, limiter, profile_
                         cvss=info.get("cvss"),
                         description=info.get("description", ""),
                         matched_at=data.get("matched-at", ""),
-                        evidence=data.get("extracted-results", [None])[0] or data.get("curl-command"),
+                        evidence=data.get("extracted-results", [None])[0]
+                        or data.get("curl-command"),
                         extraction=data.get("extracted-results", [None])[0],
                         references=info.get("reference", []),
                         tags=info.get("tags", []),
@@ -108,10 +112,11 @@ async def _run_nuclei(targets: list[str], config: ReconConfig, limiter, profile_
                     findings.append(finding)
                 except json.JSONDecodeError:
                     continue
-    except (FileNotFoundError, asyncio.TimeoutError, Exception):
+    except (TimeoutError, FileNotFoundError, Exception):
         pass
     finally:
         import os
+
         try:
             os.unlink(targets_file)
         except Exception:
@@ -123,7 +128,7 @@ async def _run_nuclei(targets: list[str], config: ReconConfig, limiter, profile_
 async def run_vuln_scan(technologies: list[Technology], config: ReconConfig) -> list[Finding]:
     """Run vulnerability scanning on discovered technologies."""
     limiter = get_limiter(config.rate_limit)
-    profile_config = getattr(config, '_profile_config', {})
+    profile_config = getattr(config, "_profile_config", {})
 
     # Build target URLs from technologies
     targets = list(set(tech.url for tech in technologies))

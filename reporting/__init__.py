@@ -3,9 +3,8 @@
 from pathlib import Path
 from typing import Any
 
-from core.models import ScanResult, ReportFormat
+from core.models import ReportFormat, ScanResult
 from reporting.html import generate_html_report
-from reporting.pdf import generate_pdf_report
 from reporting.json import generate_json_report
 
 
@@ -14,11 +13,16 @@ async def generate_reports(config, result: ScanResult) -> dict[ReportFormat, Pat
     outputs = {}
 
     for fmt in config.report_formats:
-        output_path = config.output_dir / f"report_{config.target}_{config.profile.value}.{fmt.value}"
+        output_path = (
+            config.output_dir / f"report_{config.target}_{config.profile.value}.{fmt.value}"
+        )
 
         if fmt == ReportFormat.HTML:
             outputs[fmt] = await generate_html_report(result, output_path)
         elif fmt == ReportFormat.PDF:
+            # Lazy import to avoid weasyprint dependency issues on Windows
+            from reporting.pdf import generate_pdf_report
+
             outputs[fmt] = await generate_pdf_report(result, output_path)
         elif fmt == ReportFormat.JSON:
             outputs[fmt] = await generate_json_report(result, output_path)

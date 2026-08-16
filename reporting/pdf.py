@@ -1,11 +1,11 @@
 """PDF report generator using WeasyPrint."""
 
 from pathlib import Path
-from typing import Optional
 
 try:
-    from weasyprint import HTML, CSS
+    from weasyprint import CSS, HTML
     from weasyprint.text.fonts import FontConfiguration
+
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -14,7 +14,7 @@ from core.models import ScanResult
 from reporting.html import render_report
 
 
-async def html_to_pdf(html_content: str, output_path: Path, base_url: Optional[str] = None) -> Path:
+async def html_to_pdf(html_content: str, output_path: Path, base_url: str | None = None) -> Path:
     """Convert HTML to PDF using WeasyPrint."""
     if not WEASYPRINT_AVAILABLE:
         raise RuntimeError("WeasyPrint not installed. Install with: pip install weasyprint")
@@ -26,7 +26,8 @@ async def html_to_pdf(html_content: str, output_path: Path, base_url: Optional[s
     html_doc = HTML(string=html_content, base_url=base_url)
 
     # Custom CSS for print
-    print_css = CSS(string="""
+    print_css = CSS(
+        string="""
         @page {
             size: A4;
             margin: 2cm 1.5cm;
@@ -50,7 +51,9 @@ async def html_to_pdf(html_content: str, output_path: Path, base_url: Optional[s
         pre { white-space: pre-wrap; word-wrap: break-word; }
         canvas { display: none; }  /* Hide charts in PDF */
         .no-print { display: none; }
-    """, font_config=font_config)
+    """,
+        font_config=font_config,
+    )
 
     html_doc.write_pdf(str(output_path), stylesheets=[print_css], font_config=font_config)
     return output_path

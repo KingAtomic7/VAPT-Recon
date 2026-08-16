@@ -15,8 +15,8 @@ from utils.rate_limit import AsyncTokenBucket, RateLimiter, get_limiter
 __all__ = [
     "AsyncTokenBucket",
     "RateLimiter",
-    "get_limiter",
     "finding_fingerprint",
+    "get_limiter",
     "merge_findings",
     "merge_services",
     "merge_subdomains",

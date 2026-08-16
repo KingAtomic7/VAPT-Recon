@@ -2,24 +2,18 @@
 
 import re
 from urllib.parse import urlparse
-from collections import defaultdict
 
-from core.models import Subdomain, PortService, Technology, Finding
-
+from core.models import Finding, PortService, Subdomain, Technology
 
 # Subdomain normalization
-_DOMAIN_REGEX = re.compile(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$', re.I)
+_DOMAIN_REGEX = re.compile(
+    r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$", re.I
+)
 
 
 def normalize_subdomain(subdomain: str) -> str:
     """Normalize subdomain to lowercase, strip trailing dot."""
-    subdomain = subdomain.strip().lower().rstrip('.')
-    # Remove common prefixes that don't affect uniqueness
-    for prefix in ['www.', 'mail.', 'ftp.', 'smtp.', 'pop.', 'imap.']:
-        if subdomain.startswith(prefix):
-            subdomain = subdomain[len(prefix):]
-            break
-    return subdomain
+    return subdomain.strip().lower().rstrip(".")
 
 
 def is_valid_subdomain(subdomain: str) -> bool:
@@ -68,12 +62,11 @@ def normalize_url(url: str) -> str:
     # Normalize host
     host = parsed.netloc.lower()
     # Remove default ports
-    if (scheme == 'http' and host.endswith(':80')) or \
-       (scheme == 'https' and host.endswith(':443')):
-        host = host.rsplit(':', 1)[0]
+    if (scheme == "http" and host.endswith(":80")) or (scheme == "https" and host.endswith(":443")):
+        host = host.rsplit(":", 1)[0]
     # Normalize path - remove fragments, sort query params
-    path = parsed.path.rstrip('/') or '/'
-    query = '&'.join(sorted(parsed.query.split('&'))) if parsed.query else ''
+    path = parsed.path.rstrip("/") or "/"
+    query = "&".join(sorted(parsed.query.split("&"))) if parsed.query else ""
     normalized = f"{scheme}://{host}{path}"
     if query:
         normalized += f"?{query}"
@@ -81,17 +74,17 @@ def normalize_url(url: str) -> str:
 
 
 # Finding deduplication
-_FINGERPRINT_FIELDS = ['template_id', 'matched_at', 'severity']
+_FINGERPRINT_FIELDS = ["template_id", "matched_at", "severity"]
 
 
 def finding_fingerprint(finding: Finding) -> str:
     """Generate fingerprint for finding deduplication."""
     parts = []
     for field in _FINGERPRINT_FIELDS:
-        value = getattr(finding, field, '')
+        value = getattr(finding, field, "")
         if value:
             parts.append(str(value).lower())
-    return '|'.join(parts)
+    return "|".join(parts)
 
 
 def merge_findings(findings: list[Finding]) -> list[Finding]:
@@ -104,8 +97,8 @@ def merge_findings(findings: list[Finding]) -> list[Finding]:
         else:
             # Merge evidence and references
             existing = merged[fp]
-            if f.evidence and f.evidence not in (existing.evidence or ''):
-                existing.evidence = (existing.evidence or '') + '\n---\n' + f.evidence
+            if f.evidence and f.evidence not in (existing.evidence or ""):
+                existing.evidence = (existing.evidence or "") + "\n---\n" + f.evidence
             for ref in f.references:
                 if ref not in existing.references:
                     existing.references.append(ref)
@@ -139,7 +132,7 @@ def merge_services(services: list[PortService]) -> list[PortService]:
         else:
             existing = merged[key]
             # Prefer nmap over naabu for service info
-            if svc.source == 'nmap' and existing.source == 'naabu':
+            if svc.source == "nmap" and existing.source == "naabu":
                 merged[key] = svc
             elif svc.source == existing.source:
                 # Merge version info

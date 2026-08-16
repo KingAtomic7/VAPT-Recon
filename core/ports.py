@@ -1,30 +1,33 @@
 """Port scanning module."""
 
 import asyncio
+import json
 import xml.etree.ElementTree as ET
-from typing import Any
 
 from core.models import PortService, ReconConfig, Subdomain
 from utils.dedupe import merge_services
 from utils.rate_limit import get_limiter
 
 
-async def _run_naabu(hosts: list[str], config: ReconConfig, limiter, profile_config: dict) -> list[PortService]:
+async def _run_naabu(
+    hosts: list[str], config: ReconConfig, limiter, profile_config: dict
+) -> list[PortService]:
     """Run naabu for fast port scanning."""
     services = []
     ports_config = profile_config.get("ports", {})
     top_ports = ports_config.get("top_ports", 1000)
     rate = ports_config.get("rate", 300)
 
-    if top_ports > 0:
-        port_args = ["-top-ports", str(top_ports)]
-    else:
-        port_args = ["-p-"]
+    port_args = ["-top-ports", str(top_ports)] if top_ports > 0 else ["-p-"]
 
     args = [
-        "naabu", "-host", ",".join(hosts),
-        "-rate", str(rate),
-        "-silent", "-json",
+        "naabu",
+        "-host",
+        ",".join(hosts),
+        "-rate",
+        str(rate),
+        "-silent",
+        "-json",
         *port_args,
     ]
 
@@ -34,29 +37,33 @@ async def _run_naabu(hosts: list[str], config: ReconConfig, limiter, profile_con
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
 
-        for line in stdout.decode().strip().split('\n'):
+        for line in stdout.decode().strip().split("\n"):
             if line:
                 try:
                     data = json.loads(line)
                     host = data.get("host", "")
                     port = data.get("port", 0)
                     if host and port:
-                        services.append(PortService(
-                            host=host,
-                            port=port,
-                            protocol="tcp",
-                            source="naabu",
-                        ))
+                        services.append(
+                            PortService(
+                                host=host,
+                                port=port,
+                                protocol="tcp",
+                                source="naabu",
+                            )
+                        )
                 except json.JSONDecodeError:
                     continue
-    except (FileNotFoundError, asyncio.TimeoutError, Exception):
+    except (TimeoutError, FileNotFoundError, Exception):
         pass
     return services
 
 
-async def _run_nmap(hosts: list[str], config: ReconConfig, limiter, profile_config: dict) -> list[PortService]:
+async def _run_nmap(
+    hosts: list[str], config: ReconConfig, limiter, profile_config: dict
+) -> list[PortService]:
     """Run nmap for service detection."""
     services = []
     ports_config = profile_config.get("ports", {})
@@ -70,7 +77,7 @@ async def _run_nmap(hosts: list[str], config: ReconConfig, limiter, profile_conf
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=600)
+        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=600)
 
         root = ET.fromstring(stdout.decode())
         for host_elem in root.findall("host"):
@@ -98,16 +105,18 @@ async def _run_nmap(hosts: list[str], config: ReconConfig, limiter, profile_conf
                         version_parts.append(service_elem.get("extrainfo"))
                     version = " ".join(version_parts) if version_parts else None
 
-                services.append(PortService(
-                    host=host,
-                    port=port_id,
-                    protocol=protocol,
-                    service=service,
-                    version=version,
-                    state=state,
-                    source="nmap",
-                ))
-    except (FileNotFoundError, asyncio.TimeoutError, ET.ParseError, Exception):
+                services.append(
+                    PortService(
+                        host=host,
+                        port=port_id,
+                        protocol=protocol,
+                        service=service,
+                        version=version,
+                        state=state,
+                        source="nmap",
+                    )
+                )
+    except (TimeoutError, FileNotFoundError, ET.ParseError, Exception):
         pass
     return services
 
@@ -115,7 +124,7 @@ async def _run_nmap(hosts: list[str], config: ReconConfig, limiter, profile_conf
 async def run_port_scan(subdomains: list[Subdomain], config: ReconConfig) -> list[PortService]:
     """Run port scanning on resolved subdomains."""
     limiter = get_limiter(config.rate_limit)
-    profile_config = getattr(config, '_profile_config', {})
+    profile_config = getattr(config, "_profile_config", {})
 
     # Collect unique hosts (IPs and hostnames)
     hosts = []

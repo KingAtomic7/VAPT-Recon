@@ -1,13 +1,9 @@
 """Enrichment utilities for additional context."""
 
 import asyncio
-import json
 import socket
 import ssl
-import subprocess
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -19,7 +15,8 @@ async def enrich_whois(domain: str, limiter) -> dict[str, Any]:
     try:
         await limiter.acquire("whois", rate=5)
         proc = await asyncio.create_subprocess_exec(
-            "whois", domain,
+            "whois",
+            domain,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -36,6 +33,7 @@ async def enrich_dns(domain: str, limiter) -> dict[str, Any]:
 
     try:
         import dns.resolver
+
         resolver = dns.resolver.Resolver()
         resolver.timeout = 5
         resolver.lifetime = 10
@@ -93,8 +91,8 @@ async def enrich_shodan(query: str, api_key: str, limiter) -> dict[str, Any]:
         await limiter.acquire("shodan", rate=1)
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(
-                f"https://api.shodan.io/shodan/host/search",
-                params={"key": api_key, "query": query, "facets": "port,vuln"}
+                "https://api.shodan.io/shodan/host/search",
+                params={"key": api_key, "query": query, "facets": "port,vuln"},
             )
             if resp.status_code == 200:
                 return resp.json()
@@ -123,15 +121,10 @@ async def enrich_censys(query: str, api_id: str, api_secret: str, limiter) -> di
         return {"query": query, "error": str(e)}
 
 
-async def run_enrichment(
-    target: str,
-    subdomains: list,
-    services: list,
-    config
-) -> dict[str, Any]:
+async def run_enrichment(target: str, subdomains: list, services: list, config) -> dict[str, Any]:
     """Run all enabled enrichment tasks."""
     limiter = get_limiter(config.rate_limit)
-    profile_config = getattr(config, '_profile_config', {})
+    profile_config = getattr(config, "_profile_config", {})
     enrich_config = profile_config.get("enrich", {})
 
     if not enrich_config.get("enabled", False):
@@ -158,12 +151,14 @@ async def run_enrichment(
     # Shodan
     if enrich_config.get("shodan", False):
         import os
+
         api_key = os.getenv("SHODAN_API_KEY")
         results["shodan"] = await enrich_shodan(target, api_key, limiter)
 
     # Censys
     if enrich_config.get("censys", False):
         import os
+
         api_id = os.getenv("CENSYS_API_ID")
         api_secret = os.getenv("CENSYS_API_SECRET")
         results["censys"] = await enrich_censys(target, api_id, api_secret, limiter)

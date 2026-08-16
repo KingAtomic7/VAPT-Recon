@@ -2,14 +2,21 @@
 
 import asyncio
 from pathlib import Path
-from typing import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from core.models import (
-    Finding, PortService, Profile, ReconConfig, ReportFormat,
-    ScanMetadata, ScanResult, Severity, Subdomain, Technology
+    Finding,
+    PortService,
+    Profile,
+    ReconConfig,
+    ReportFormat,
+    ScanMetadata,
+    ScanResult,
+    Severity,
+    Subdomain,
+    Technology,
 )
 
 
@@ -37,9 +44,18 @@ def sample_config(tmp_path: Path) -> ReconConfig:
 def sample_subdomains() -> list[Subdomain]:
     """Sample subdomains for testing."""
     return [
-        Subdomain(name="example.com", source="subfinder", resolved=True, ip_addresses=["93.184.216.34"]),
-        Subdomain(name="www.example.com", source="subfinder", resolved=True, ip_addresses=["93.184.216.34"]),
-        Subdomain(name="api.example.com", source="amass", resolved=True, ip_addresses=["93.184.216.35"]),
+        Subdomain(
+            name="example.com", source="subfinder", resolved=True, ip_addresses=["93.184.216.34"]
+        ),
+        Subdomain(
+            name="www.example.com",
+            source="subfinder",
+            resolved=True,
+            ip_addresses=["93.184.216.34"],
+        ),
+        Subdomain(
+            name="api.example.com", source="amass", resolved=True, ip_addresses=["93.184.216.35"]
+        ),
         Subdomain(name="test.example.com", source="crtsh", resolved=False),
     ]
 
@@ -48,9 +64,30 @@ def sample_subdomains() -> list[Subdomain]:
 def sample_services() -> list[PortService]:
     """Sample port services for testing."""
     return [
-        PortService(host="example.com", port=80, protocol="tcp", service="http", version="nginx 1.18.0", source="nmap"),
-        PortService(host="example.com", port=443, protocol="tcp", service="https", version="nginx 1.18.0", source="nmap"),
-        PortService(host="api.example.com", port=443, protocol="tcp", service="https", version="nginx 1.20.0", source="nmap"),
+        PortService(
+            host="example.com",
+            port=80,
+            protocol="tcp",
+            service="http",
+            version="nginx 1.18.0",
+            source="nmap",
+        ),
+        PortService(
+            host="example.com",
+            port=443,
+            protocol="tcp",
+            service="https",
+            version="nginx 1.18.0",
+            source="nmap",
+        ),
+        PortService(
+            host="api.example.com",
+            port=443,
+            protocol="tcp",
+            service="https",
+            version="nginx 1.20.0",
+            source="nmap",
+        ),
     ]
 
 
@@ -58,9 +95,28 @@ def sample_services() -> list[PortService]:
 def sample_technologies() -> list[Technology]:
     """Sample technologies for testing."""
     return [
-        Technology(url="https://example.com", category="server", name="nginx", version="1.18.0", confidence=95, source="httpx"),
-        Technology(url="https://example.com", category="cdn", name="cloudflare", confidence=90, source="httpx"),
-        Technology(url="https://api.example.com", category="framework", name="express", confidence=85, source="wappalyzer"),
+        Technology(
+            url="https://example.com",
+            category="server",
+            name="nginx",
+            version="1.18.0",
+            confidence=95,
+            source="httpx",
+        ),
+        Technology(
+            url="https://example.com",
+            category="cdn",
+            name="cloudflare",
+            confidence=90,
+            source="httpx",
+        ),
+        Technology(
+            url="https://api.example.com",
+            category="framework",
+            name="express",
+            confidence=85,
+            source="wappalyzer",
+        ),
     ]
 
 
@@ -119,7 +175,7 @@ def sample_scan_result(
 @pytest.fixture
 def mock_subprocess():
     """Mock subprocess for tool execution."""
-    with patch('asyncio.create_subprocess_exec') as mock:
+    with patch("asyncio.create_subprocess_exec") as mock:
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(b"", b""))
         mock.return_value = mock_proc

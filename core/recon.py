@@ -1,28 +1,40 @@
 """Main recon orchestrator."""
 
-import asyncio
 import json
 import time
 from datetime import datetime
-from pathlib import Path
-from typing import Any
 
 from rich.console import Console
-from rich.progress import (
-    Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-)
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
-from core.models import ReconConfig, ScanResult, ScanMetadata, Profile
-from core.subdomains import run_subdomain_enum
+from config.profiles import load_profiles
+from core.models import (
+    Finding,
+    PortService,
+    ReconConfig,
+    ScanMetadata,
+    ScanResult,
+    Subdomain,
+    Technology,
+)
+from core.params import run_param_discovery
 from core.ports import run_port_scan
+from core.subdomains import run_subdomain_enum
 from core.tech import run_tech_fingerprint
 from core.vulns import run_vuln_scan
-from core.params import run_param_discovery
 from utils.enrich import run_enrichment
-from config.profiles import load_profiles, get_global_config
-
 
 console = Console()
+
+# Phase names in order for checkpoint tracking
+PHASE_NAMES = [
+    "Subdomain Enumeration",
+    "Port Scanning",
+    "Technology Fingerprinting",
+    "Vulnerability Scanning",
+    "Parameter Discovery",
+    "Enrichment",
+]
 
 
 async def run_recon(config: ReconConfig) -> ScanResult:
@@ -32,10 +44,8 @@ async def run_recon(config: ReconConfig) -> ScanResult:
     # Load profile configuration
     if config.config_path:
         profile_config = load_profiles(config.config_path).get(config.profile.value, {})
-        global_config = get_global_config(config.config_path)
     else:
         profile_config = load_profiles().get(config.profile.value, {})
-        global_config = get_global_config()
 
     # Attach profile config to config object for modules to access
     config._profile_config = profile_config
@@ -53,9 +63,10 @@ async def run_recon(config: ReconConfig) -> ScanResult:
         metadata=metadata,
     )
 
-    # Resume from checkpoint if requested
+    # Load completed phases from checkpoint if resuming
+    completed_phases: list[str] = []
     if config.resume and config.checkpoint_file and config.checkpoint_file.exists():
-        await _load_checkpoint(config, result)
+        completed_phases = await _load_checkpoint(config, result)
 
     # Progress tracking
     phases = [
@@ -82,20 +93,39 @@ async def run_recon(config: ReconConfig) -> ScanResult:
             phase_task = progress.add_task(phase_name, total=100)
             progress.update(main_task, completed=completed_weight * 100)
 
+            # Skip phase if already completed (resume)
+            if phase_name in completed_phases:
+                progress.update(
+                    phase_task,
+                    completed=100,
+                    description=f"{phase_name} [yellow]SKIPPED (resumed)[/yellow]",
+                )
+                completed_weight += weight
+                progress.update(main_task, completed=completed_weight * 100)
+                continue
+
             try:
-                await phase_func(config, result, lambda p: progress.update(phase_task, completed=p))
+                await phase_func(
+                    config,
+                    result,
+                    lambda completed, **kwargs: progress.update(
+                        phase_task, completed=completed, **kwargs
+                    ),
+                )
                 progress.update(phase_task, completed=100)
                 completed_weight += weight
                 progress.update(main_task, completed=completed_weight * 100)
+                completed_phases.append(phase_name)
             except Exception as e:
-                result.errors.append(f"{phase_name}: {str(e)}")
-                progress.update(phase_task, completed=100, description=f"{phase_name} [red]FAILED[/red]")
+                result.errors.append(f"{phase_name}: {e!s}")
+                progress.update(
+                    phase_task, completed=100, description=f"{phase_name} [red]FAILED[/red]"
+                )
                 completed_weight += weight
                 progress.update(main_task, completed=completed_weight * 100)
 
             # Save checkpoint after each phase
-            if not config.resume or True:  # Always save for resume capability
-                await _save_checkpoint(config, result)
+            await _save_checkpoint(config, result, completed_phases)
 
     # Finalize metadata
     end_time = time.monotonic()
@@ -103,7 +133,7 @@ async def run_recon(config: ReconConfig) -> ScanResult:
     metadata.duration_seconds = end_time - start_time
 
     # Save final checkpoint
-    await _save_checkpoint(config, result)
+    await _save_checkpoint(config, result, completed_phases)
 
     return result
 
@@ -155,7 +185,7 @@ async def _run_vulns_phase(config: ReconConfig, result: ScanResult, update_progr
 
 async def _run_params_phase(config: ReconConfig, result: ScanResult, update_progress) -> None:
     """Run parameter discovery phase."""
-    profile_config = getattr(config, '_profile_config', {})
+    profile_config = getattr(config, "_profile_config", {})
     if not profile_config.get("params", {}).get("enabled", False):
         update_progress(100, description="Skipped (disabled in profile)")
         return
@@ -170,7 +200,7 @@ async def _run_params_phase(config: ReconConfig, result: ScanResult, update_prog
 
 async def _run_enrich_phase(config: ReconConfig, result: ScanResult, update_progress) -> None:
     """Run enrichment phase."""
-    profile_config = getattr(config, '_profile_config', {})
+    profile_config = getattr(config, "_profile_config", {})
     if not profile_config.get("enrich", {}).get("enabled", False):
         update_progress(100, description="Skipped (disabled in profile)")
         return
@@ -181,7 +211,9 @@ async def _run_enrich_phase(config: ReconConfig, result: ScanResult, update_prog
     result.metadata.config_snapshot["enrichment"] = enrichment
 
 
-async def _save_checkpoint(config: ReconConfig, result: ScanResult) -> None:
+async def _save_checkpoint(
+    config: ReconConfig, result: ScanResult, completed_phases: list[str] | None = None
+) -> None:
     """Save scan progress checkpoint."""
     if not config.checkpoint_file:
         return
@@ -194,6 +226,7 @@ async def _save_checkpoint(config: ReconConfig, result: ScanResult) -> None:
                 "rate_limit": config.rate_limit,
             },
             "result": result.model_dump(mode="json"),
+            "completed_phases": completed_phases or [],
             "saved_at": datetime.utcnow().isoformat(),
         }
         config.checkpoint_file.write_text(json.dumps(checkpoint_data, indent=2))
@@ -201,20 +234,25 @@ async def _save_checkpoint(config: ReconConfig, result: ScanResult) -> None:
         pass  # Don't fail scan on checkpoint error
 
 
-async def _load_checkpoint(config: ReconConfig, result: ScanResult) -> None:
-    """Load scan progress from checkpoint."""
+async def _load_checkpoint(config: ReconConfig, result: ScanResult) -> list[str]:
+    """Load scan progress from checkpoint. Returns list of completed phase names."""
     if not config.checkpoint_file or not config.checkpoint_file.exists():
-        return
+        return []
 
     try:
         data = json.loads(config.checkpoint_file.read_text())
         # Restore result data
         checkpoint_result = data.get("result", {})
-        result.subdomains = [ScanResult.model_fields["subdomains"].annotation[0](**s) for s in checkpoint_result.get("subdomains", [])]
-        result.services = [ScanResult.model_fields["services"].annotation[0](**s) for s in checkpoint_result.get("services", [])]
-        result.technologies = [ScanResult.model_fields["technologies"].annotation[0](**s) for s in checkpoint_result.get("technologies", [])]
-        result.findings = [ScanResult.model_fields["findings"].annotation[0](**s) for s in checkpoint_result.get("findings", [])]
+        result.subdomains = [Subdomain(**s) for s in checkpoint_result.get("subdomains", [])]
+        result.services = [PortService(**s) for s in checkpoint_result.get("services", [])]
+        result.technologies = [Technology(**s) for s in checkpoint_result.get("technologies", [])]
+        result.findings = [Finding(**s) for s in checkpoint_result.get("findings", [])]
         result.errors = checkpoint_result.get("errors", [])
         console.print(f"[yellow]Resumed from checkpoint: {config.checkpoint_file}[/yellow]")
-    except Exception:
-        pass  # Ignore checkpoint load errors
+        completed = data.get("completed_phases", [])
+        console.print(f"[yellow]Completed phases loaded: {completed}[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Checkpoint load error: {e}[/red]")
+        return []  # Ignore checkpoint load errors
+    else:
+        return completed

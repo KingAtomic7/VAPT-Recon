@@ -2,14 +2,13 @@
 
 import asyncio
 import time
-from collections import deque
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
 class AsyncTokenBucket:
     """Async token bucket rate limiter."""
+
     rate: int  # tokens per second
     burst: int = 0  # max burst (0 = rate)
     _tokens: float = field(init=False, default=0)
@@ -26,10 +25,7 @@ class AsyncTokenBucket:
             while True:
                 now = time.monotonic()
                 elapsed = now - self._last_update
-                self._tokens = min(
-                    self.burst or self.rate,
-                    self._tokens + elapsed * self.rate
-                )
+                self._tokens = min(self.burst or self.rate, self._tokens + elapsed * self.rate)
                 self._last_update = now
 
                 if self._tokens >= tokens:
@@ -44,10 +40,7 @@ class AsyncTokenBucket:
         """Try to acquire tokens without blocking."""
         now = time.monotonic()
         elapsed = now - self._last_update
-        self._tokens = min(
-            self.burst or self.rate,
-            self._tokens + elapsed * self.rate
-        )
+        self._tokens = min(self.burst or self.rate, self._tokens + elapsed * self.rate)
         self._last_update = now
 
         if self._tokens >= tokens:
@@ -58,18 +51,19 @@ class AsyncTokenBucket:
 
 class RateLimiter:
     """Global rate limiter with named buckets."""
+
     def __init__(self, default_rate: int = 100):
         self.default_rate = default_rate
         self._buckets: dict[str, AsyncTokenBucket] = {}
         self._lock = asyncio.Lock()
 
-    def bucket(self, name: str, rate: Optional[int] = None) -> AsyncTokenBucket:
+    def bucket(self, name: str, rate: int | None = None) -> AsyncTokenBucket:
         """Get or create a named bucket."""
         if name not in self._buckets:
             self._buckets[name] = AsyncTokenBucket(rate or self.default_rate)
         return self._buckets[name]
 
-    async def acquire(self, name: str, tokens: int = 1, rate: Optional[int] = None) -> None:
+    async def acquire(self, name: str, tokens: int = 1, rate: int | None = None) -> None:
         """Acquire tokens from named bucket."""
         bucket = self.bucket(name, rate)
         await bucket.acquire(tokens)
@@ -81,7 +75,7 @@ class RateLimiter:
 
 
 # Global rate limiter instance
-_global_limiter: Optional[RateLimiter] = None
+_global_limiter: RateLimiter | None = None
 
 
 def get_limiter(default_rate: int = 100) -> RateLimiter:

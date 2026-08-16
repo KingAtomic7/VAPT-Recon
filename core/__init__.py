@@ -10,7 +10,7 @@ from core.models import (
     ScanResult,
     Severity,
     Subdomain,
-    Technology
+    Technology,
 )
 
 __all__ = [

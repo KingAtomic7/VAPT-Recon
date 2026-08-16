@@ -5,8 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from core.models import ScanResult, ReportFormat
-
+from core.models import ScanResult
 
 SCHEMA_VERSION = "1.0"
 
@@ -21,7 +20,9 @@ def serialize_scan_result(result: ScanResult) -> dict[str, Any]:
             "target": result.config.target,
             "profile": result.config.profile.value,
             "started_at": result.metadata.started_at.isoformat() + "Z",
-            "completed_at": result.metadata.completed_at.isoformat() + "Z" if result.metadata.completed_at else None,
+            "completed_at": result.metadata.completed_at.isoformat() + "Z"
+            if result.metadata.completed_at
+            else None,
             "duration_seconds": result.metadata.duration_seconds,
             "tools_versions": result.metadata.tools_versions,
         },
