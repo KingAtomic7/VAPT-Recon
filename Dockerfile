@@ -15,57 +15,29 @@ ARG KATANA_VERSION=v1.1.3
 ARG DNSX_VERSION=v1.2.1
 ARG AMASS_VERSION=v4.2.0
 
-# Download and install from GitHub releases
+# Detect architecture
 RUN set -ex; \
     arch=$(uname -m); \
     case $arch in \
-        x86_64) GOARCH=amd64 ;; \
-        aarch64) GOARCH=arm64 ;; \
+        x86_64) echo "GOARCH=amd64" > /tmp/arch.txt ;; \
+        aarch64) echo "GOARCH=arm64" > /tmp/arch.txt ;; \
         *) echo "Unsupported arch: $arch"; exit 1 ;; \
-    esac; \
-    \
-    # Note: release tags include 'v' (v2.14.0), asset filenames don't (subfinder_2.14.0_linux_amd64.zip)
-    # subfinder
-    SF_VER=${SUBFINDER_VERSION#v} \
-    && curl -sSL "https://github.com/projectdiscovery/subfinder/releases/download/${SUBFINDER_VERSION}/subfinder_${SF_VER}_linux_${GOARCH}.zip" -o /tmp/subfinder.zip \
-    && unzip -o /tmp/subfinder.zip -d /usr/local/bin/ subfinder \
-    && rm /tmp/subfinder.zip; \
-    \
-    # naabu
-    NB_VER=${NAABU_VERSION#v} \
-    && curl -sSL "https://github.com/projectdiscovery/naabu/releases/download/${NAABU_VERSION}/naabu_${NB_VER}_linux_${GOARCH}.zip" -o /tmp/naabu.zip \
-    && unzip -o /tmp/naabu.zip -d /usr/local/bin/ naabu \
-    && rm /tmp/naabu.zip; \
-    \
-    # nuclei
-    NC_VER=${NUCLEI_VERSION#v} \
-    && curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NC_VER}_linux_${GOARCH}.zip" -o /tmp/nuclei.zip \
-    && unzip -o /tmp/nuclei.zip -d /usr/local/bin/ nuclei \
-    && rm /tmp/nuclei.zip; \
-    \
-    # httpx
-    HX_VER=${HTTPX_VERSION#v} \
-    && curl -sSL "https://github.com/projectdiscovery/httpx/releases/download/${HTTPX_VERSION}/httpx_${HX_VER}_linux_${GOARCH}.zip" -o /tmp/httpx.zip \
-    && unzip -o /tmp/httpx.zip -d /usr/local/bin/ httpx \
-    && rm /tmp/httpx.zip; \
-    \
-    # katana
-    KT_VER=${KATANA_VERSION#v} \
-    && curl -sSL "https://github.com/projectdiscovery/katana/releases/download/${KATANA_VERSION}/katana_${KT_VER}_linux_${GOARCH}.zip" -o /tmp/katana.zip \
-    && unzip -o /tmp/katana.zip -d /usr/local/bin/ katana \
-    && rm /tmp/katana.zip; \
-    \
-    # dnsx
-    DX_VER=${DNSX_VERSION#v} \
-    && curl -sSL "https://github.com/projectdiscovery/dnsx/releases/download/${DNSX_VERSION}/dnsx_${DX_VER}_linux_${GOARCH}.zip" -o /tmp/dnsx.zip \
-    && unzip -o /tmp/dnsx.zip -d /usr/local/bin/ dnsx \
-    && rm /tmp/dnsx.zip; \
-    \
-    # amass (uses amass_Linux_amd64.zip with capital L)
-    curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_Linux_${GOARCH}.zip" -o /tmp/amass.zip \
-    && unzip -o /tmp/amass.zip -d /tmp/amass/ \
-    && mv /tmp/amass/amass /usr/local/bin/ \
-    && rm -rf /tmp/amass.zip /tmp/amass
+    esac
+
+# Download each tool in separate RUN commands for isolation and cache busting
+RUN . /tmp/arch.txt && SF_VER=${SUBFINDER_VERSION#v} && curl -sSL "https://github.com/projectdiscovery/subfinder/releases/download/${SUBFINDER_VERSION}/subfinder_${SF_VER}_linux_${GOARCH}.zip" -o /tmp/subfinder.zip && unzip -o /tmp/subfinder.zip -d /usr/local/bin/ subfinder && rm /tmp/subfinder.zip
+
+RUN . /tmp/arch.txt && NB_VER=${NAABU_VERSION#v} && curl -sSL "https://github.com/projectdiscovery/naabu/releases/download/${NAABU_VERSION}/naabu_${NB_VER}_linux_${GOARCH}.zip" -o /tmp/naabu.zip && unzip -o /tmp/naabu.zip -d /usr/local/bin/ naabu && rm /tmp/naabu.zip
+
+RUN . /tmp/arch.txt && NC_VER=${NUCLEI_VERSION#v} && curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NC_VER}_linux_${GOARCH}.zip" -o /tmp/nuclei.zip && unzip -o /tmp/nuclei.zip -d /usr/local/bin/ nuclei && rm /tmp/nuclei.zip
+
+RUN . /tmp/arch.txt && HX_VER=${HTTPX_VERSION#v} && curl -sSL "https://github.com/projectdiscovery/httpx/releases/download/${HTTPX_VERSION}/httpx_${HX_VER}_linux_${GOARCH}.zip" -o /tmp/httpx.zip && unzip -o /tmp/httpx.zip -d /usr/local/bin/ httpx && rm /tmp/httpx.zip
+
+RUN . /tmp/arch.txt && KT_VER=${KATANA_VERSION#v} && curl -sSL "https://github.com/projectdiscovery/katana/releases/download/${KATANA_VERSION}/katana_${KT_VER}_linux_${GOARCH}.zip" -o /tmp/katana.zip && unzip -o /tmp/katana.zip -d /usr/local/bin/ katana && rm /tmp/katana.zip
+
+RUN . /tmp/arch.txt && DX_VER=${DNSX_VERSION#v} && curl -sSL "https://github.com/projectdiscovery/dnsx/releases/download/${DNSX_VERSION}/dnsx_${DX_VER}_linux_${GOARCH}.zip" -o /tmp/dnsx.zip && unzip -o /tmp/dnsx.zip -d /usr/local/bin/ dnsx && rm /tmp/dnsx.zip
+
+RUN . /tmp/arch.txt && curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_Linux_${GOARCH}.zip" -o /tmp/amass.zip && unzip -o /tmp/amass.zip -d /tmp/amass/ && mv /tmp/amass/amass /usr/local/bin/ && rm -rf /tmp/amass.zip /tmp/amass
 
 # Stage 2: Python runtime with tools
 FROM python:3.11-slim
