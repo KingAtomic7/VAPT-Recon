@@ -33,12 +33,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy tools from ProjectDiscovery images (try multiple common locations)
-COPY --from=subfinder /usr/bin/subfinder /usr/local/bin/subfinder
-COPY --from=naabu /usr/bin/naabu /usr/local/bin/naabu
-COPY --from=nuclei /usr/bin/nuclei /usr/local/bin/nuclei
-COPY --from=httpx /usr/bin/httpx /usr/local/bin/httpx
-COPY --from=dnsx /usr/bin/dnsx /usr/local/bin/dnsx
+# Copy tools from ProjectDiscovery images (copy all binaries from common locations)
+COPY --from=subfinder /usr/bin/* /usr/local/bin/
+COPY --from=naabu /usr/bin/* /usr/local/bin/
+COPY --from=nuclei /usr/bin/* /usr/local/bin/
+COPY --from=httpx /usr/bin/* /usr/local/bin/
+COPY --from=dnsx /usr/bin/* /usr/local/bin/
 
 # Copy remaining tools from go-tools
 COPY --from=go-tools /go/bin/* /usr/local/bin/
