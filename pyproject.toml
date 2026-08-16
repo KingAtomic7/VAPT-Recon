@@ -61,4 +61,3 @@ addopts = "-v --tb=short"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["vapt_recon*"]
