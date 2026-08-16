@@ -1,18 +1,18 @@
 # Multi-stage Dockerfile for vapt-recon
-# Uses official ProjectDiscovery images for reliable tooling
+# Uses official ProjectDiscovery images where available
 
-# Stage 1: Build Go tools using projectdiscovery base
+# Stage 1: Use official ProjectDiscovery images (available on Docker Hub)
 FROM projectdiscovery/subfinder:v2.14.0 AS subfinder
 FROM projectdiscovery/naabu:v2.3.0 AS naabu
 FROM projectdiscovery/nuclei:v3.3.7 AS nuclei
 FROM projectdiscovery/httpx:v1.6.8 AS httpx
-FROM projectdiscovery/katana:v1.1.0 AS katana
 FROM projectdiscovery/dnsx:v1.2.1 AS dnsx
 
-# Stage 2: Build amass and additional tools from source
+# Stage 2: Build remaining tools from source (Go 1.22)
 FROM golang:1.22-alpine AS go-tools
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
 RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0 \
+    && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.0 \
     && go install -v github.com/tomnomnom/assetfinder@latest \
     && go install -v github.com/tomnomnom/waybackunique@latest \
     && go install -v github.com/lc/gau/v2/cmd/gau@latest \
@@ -34,17 +34,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/ *
 
 # Copy tools from ProjectDiscovery images
 COPY --from=subfinder /usr/local/bin/subfinder /usr/local/bin/subfinder
 COPY --from=naabu /usr/local/bin/naabu /usr/local/bin/naabu
 COPY --from=nuclei /usr/local/bin/nuclei /usr/local/bin/nuclei
 COPY --from=httpx /usr/local/bin/httpx /usr/local/bin/httpx
-COPY --from=katana /usr/local/bin/katana /usr/local/bin/katana
 COPY --from=dnsx /usr/local/bin/dnsx /usr/local/bin/dnsx
 
-# Copy amass and additional tools from go-tools
+# Copy remaining tools from go-tools
 COPY --from=go-tools /go/bin/* /usr/local/bin/
 
 # Verify tools
