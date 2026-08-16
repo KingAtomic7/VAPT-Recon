@@ -22,7 +22,8 @@
 
 ## Quick Start
 
-### Docker (Recommended)
+### Docker (Recommended for Scanning)
+All Go tools pre-installed, multi-arch (amd64/arm64):
 ```bash
 docker run -it --rm \
   -v $(pwd)/reports:/home/scanner/reports \
@@ -30,18 +31,27 @@ docker run -it --rm \
   scan example.com --profile standard --report html,pdf
 ```
 
-### pipx (Isolated)
+### pipx (Isolated — requires Go tools for scanning)
 ```bash
 pipx install git+https://github.com/KingAtomic7/vapt-recon.git
+# Install Go tools (see below), then:
 vapt-recon scan example.com --profile standard
 ```
 
-### Development Install
+### Development Install (requires Go tools for scanning)
 ```bash
 git clone https://github.com/KingAtomic7/vapt-recon.git
 cd vapt-recon
 pip install -e .[dev]
-vapt-recon scan example.com --profile standard
+
+# Install Go 1.22+ and ProjectDiscovery tools:
+go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+go install -v github.com/projectdiscovery/katana/cmd/katana@latest
+go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+# Add ~/go/bin to PATH
 ```
 
 ## Usage
