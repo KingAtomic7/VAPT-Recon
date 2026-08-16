@@ -173,11 +173,24 @@ vapt-recon/
 ├── pyproject.toml            # Modern Python packaging
 ├── Dockerfile                # Multi-stage build
 ├── Makefile                  # Dev convenience
+├── generate_screenshots.py   # HTML report screenshot generator
+├── generate_terminal_demo.py # Terminal demo screenshot generator
+├── .pre-commit-config.yaml   # Pre-commit hooks
+├── .dockerignore             # Docker ignore rules
+├── .github/
+│   └── workflows/
+│       ├── ci.yml            # Main CI pipeline
+│       ├── scheduled-scan.yml # Weekly scheduled scans
+│       └── release.yml       # Automated releases
+├── asciinema/
+│   └── demo.cast             # Terminal demo recording
 ├── config/
+│   ├── __init__.py
 │   ├── profiles.yaml         # Scan profiles
 │   ├── profiles.py           # Profile loader
 │   └── nuclei-templates/     # Curated Nuclei templates
 ├── core/
+│   ├── __init__.py
 │   ├── models.py             # Pydantic models
 │   ├── recon.py              # Main orchestrator
 │   ├── subdomains.py         # Subdomain enumeration
@@ -186,12 +199,13 @@ vapt-recon/
 │   ├── vulns.py              # Nuclei vulnerability scanning
 │   └── params.py             # Parameter discovery & fuzzing
 ├── reporting/
+│   ├── __init__.py           # Reporting facade
 │   ├── template.html.j2      # HTML report template
 │   ├── html.py               # HTML generator
 │   ├── pdf.py                # PDF generator (WeasyPrint)
-│   ├── json.py               # JSON generator
-│   └── __init__.py           # Reporting facade
+│   └── json.py               # JSON generator
 ├── utils/
+│   ├── __init__.py
 │   ├── rate_limit.py         # Token bucket rate limiter
 │   ├── dedupe.py             # Cross-module deduplication
 │   └── enrich.py             # WHOIS, DNS, SSL, Shodan, Censys
@@ -200,7 +214,11 @@ vapt-recon/
 │   └── test_integration.py   # Integration tests
 └── docs/
     ├── architecture.md       # Architecture docs
-    └── configuration.md      # Configuration guide
+    ├── configuration.md      # Configuration guide
+    ├── report-html.html      # Sample HTML report
+    ├── report-html-preview.png # HTML report preview
+    ├── report-html.png       # Full HTML report screenshot
+    └── terminal-demo.png     # Terminal demo screenshot
 ```
 
 ## Requirements
