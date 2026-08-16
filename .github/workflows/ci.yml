@@ -116,11 +116,15 @@ jobs:
       - name: Set short SHA
         id: sha
         run: echo "short_sha=${GITHUB_SHA:0:8}" >> $GITHUB_OUTPUT
+      - name: Get first tag for local scan
+        if: github.event_name != 'release'
+        id: local_tag
+        run: echo "tag=$(echo '${{ steps.meta.outputs.tags }}' | head -1)" >> $GITHUB_OUTPUT
       - name: Run Trivy vulnerability scanner (local image)
         if: github.event_name != 'release'
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:sha-${{ steps.sha.outputs.short_sha }}
+          image-ref: ${{ steps.local_tag.outputs.tag }}
           format: sarif
           output: trivy-results.sarif
           scanners: vuln
