@@ -109,7 +109,7 @@ jobs:
     steps:
       - name: Set short SHA
         id: sha
-        run: echo "short_sha=${{ github.sha::8 }}" >> $GITHUB_OUTPUT
+        run: echo "short_sha=${GITHUB_SHA:0:8}" >> $GITHUB_OUTPUT
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
