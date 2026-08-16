@@ -2,8 +2,8 @@
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/akashkumar002/vapt-recon/pkgs/container/vapt-recon)
-[![CI](https://github.com/akashkumar002/vapt-recon/actions/workflows/ci.yml/badge.svg)](https://github.com/akashkumar002/vapt-recon/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/KingAtomic7/vapt-recon/pkgs/container/vapt-recon)
+[![CI](https://github.com/KingAtomic7/vapt-recon/actions/workflows/ci.yml/badge.svg)](https://github.com/KingAtomic7/vapt-recon/actions/workflows/ci.yml)
 
 > **Automated VAPT reconnaissance & vulnerability scanning pipeline.** Reduces manual recon from hours → minutes with professional HTML/PDF reports.
 
@@ -26,19 +26,19 @@
 ```bash
 docker run -it --rm \
   -v $(pwd)/reports:/home/scanner/reports \
-  ghcr.io/akashkumar002/vapt-recon:latest \
+  ghcr.io/KingAtomic7/vapt-recon:latest \
   scan example.com --profile standard --report html,pdf
 ```
 
 ### pipx (Isolated)
 ```bash
-pipx install git+https://github.com/akashkumar002/vapt-recon.git
+pipx install git+https://github.com/KingAtomic7/vapt-recon.git
 vapt-recon scan example.com --profile standard
 ```
 
 ### Development Install
 ```bash
-git clone https://github.com/akashkumar002/vapt-recon.git
+git clone https://github.com/KingAtomic7/vapt-recon.git
 cd vapt-recon
 pip install -e .[dev]
 vapt-recon scan example.com --profile standard
@@ -83,8 +83,15 @@ vapt-recon scan example.com -o ./my-reports --rate 50
 | **PDF** | Print-ready with TOC, page numbers, headers/footers |
 | **JSON** | Structured for CI/CD, schema versioned |
 
-![HTML Report](docs/report-html.png)
-![PDF Report](docs/report-pdf.png)
+### HTML Report Preview
+
+![HTML Report](docs/report-html-preview.png)
+
+*Full report: [docs/report-html.html](docs/report-html.html) | Full screenshot: [docs/report-html.png](docs/report-html.png)*
+
+### Terminal Demo
+
+![Terminal Demo](docs/terminal-demo.png)
 
 ## Architecture
 
@@ -140,7 +147,7 @@ on:
 ### GitLab CI
 ```yaml
 vapt_scan:
-  image: ghcr.io/akashkumar002/vapt-recon:latest
+  image: ghcr.io/KingAtomic7/vapt-recon:latest
   script:
     - vapt-recon scan $TARGET --profile standard --report json
   artifacts:
