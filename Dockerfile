@@ -6,19 +6,16 @@ FROM alpine:3.20 AS tool-downloader
 
 RUN apk add --no-cache curl tar gzip unzip
 
-# Tool versions (pinned to known working releases with GitHub releases)
-# Note: filenames use version without 'v' prefix (e.g., subfinder_2.14.0_linux_amd64.zip)
-ARG SUBFINDER_VERSION=2.14.0
-ARG NAABU_VERSION=2.3.0
-ARG NUCLEI_VERSION=3.11.1
-ARG HTTPX_VERSION=1.6.10
-ARG KATANA_VERSION=1.1.3
-ARG DNSX_VERSION=1.2.1
+# Tool versions - release tags include 'v' (e.g., v2.14.0), asset filenames don't
+ARG SUBFINDER_VERSION=v2.14.0
+ARG NAABU_VERSION=v2.3.0
+ARG NUCLEI_VERSION=v3.11.1
+ARG HTTPX_VERSION=v1.6.10
+ARG KATANA_VERSION=v1.1.3
+ARG DNSX_VERSION=v1.2.1
 ARG AMASS_VERSION=v4.2.0
 
 # Download and install from GitHub releases
-# Force cache bust with build arg
-ARG CACHE_BUST=1
 RUN set -ex; \
     arch=$(uname -m); \
     case $arch in \
@@ -27,34 +24,40 @@ RUN set -ex; \
         *) echo "Unsupported arch: $arch"; exit 1 ;; \
     esac; \
     \
-    # Note: release filenames use version without 'v' prefix (e.g., subfinder_2.14.0_linux_amd64.zip)
+    # Note: release tags include 'v' (v2.14.0), asset filenames don't (subfinder_2.14.0_linux_amd64.zip)
     # subfinder
-    curl -sSL "https://github.com/projectdiscovery/subfinder/releases/download/${SUBFINDER_VERSION}/subfinder_${SUBFINDER_VERSION}_linux_${GOARCH}.zip" -o /tmp/subfinder.zip \
+    SF_VER=${SUBFINDER_VERSION#v} \
+    && curl -sSL "https://github.com/projectdiscovery/subfinder/releases/download/${SUBFINDER_VERSION}/subfinder_${SF_VER}_linux_${GOARCH}.zip" -o /tmp/subfinder.zip \
     && unzip -o /tmp/subfinder.zip -d /usr/local/bin/ subfinder \
     && rm /tmp/subfinder.zip; \
     \
     # naabu
-    curl -sSL "https://github.com/projectdiscovery/naabu/releases/download/${NAABU_VERSION}/naabu_${NAABU_VERSION}_linux_${GOARCH}.zip" -o /tmp/naabu.zip \
+    NB_VER=${NAABU_VERSION#v} \
+    && curl -sSL "https://github.com/projectdiscovery/naabu/releases/download/${NAABU_VERSION}/naabu_${NB_VER}_linux_${GOARCH}.zip" -o /tmp/naabu.zip \
     && unzip -o /tmp/naabu.zip -d /usr/local/bin/ naabu \
     && rm /tmp/naabu.zip; \
     \
     # nuclei
-    curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION}_linux_${GOARCH}.zip" -o /tmp/nuclei.zip \
+    NC_VER=${NUCLEI_VERSION#v} \
+    && curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NC_VER}_linux_${GOARCH}.zip" -o /tmp/nuclei.zip \
     && unzip -o /tmp/nuclei.zip -d /usr/local/bin/ nuclei \
     && rm /tmp/nuclei.zip; \
     \
     # httpx
-    curl -sSL "https://github.com/projectdiscovery/httpx/releases/download/${HTTPX_VERSION}/httpx_${HTTPX_VERSION}_linux_${GOARCH}.zip" -o /tmp/httpx.zip \
+    HX_VER=${HTTPX_VERSION#v} \
+    && curl -sSL "https://github.com/projectdiscovery/httpx/releases/download/${HTTPX_VERSION}/httpx_${HX_VER}_linux_${GOARCH}.zip" -o /tmp/httpx.zip \
     && unzip -o /tmp/httpx.zip -d /usr/local/bin/ httpx \
     && rm /tmp/httpx.zip; \
     \
     # katana
-    curl -sSL "https://github.com/projectdiscovery/katana/releases/download/${KATANA_VERSION}/katana_${KATANA_VERSION}_linux_${GOARCH}.zip" -o /tmp/katana.zip \
+    KT_VER=${KATANA_VERSION#v} \
+    && curl -sSL "https://github.com/projectdiscovery/katana/releases/download/${KATANA_VERSION}/katana_${KT_VER}_linux_${GOARCH}.zip" -o /tmp/katana.zip \
     && unzip -o /tmp/katana.zip -d /usr/local/bin/ katana \
     && rm /tmp/katana.zip; \
     \
     # dnsx
-    curl -sSL "https://github.com/projectdiscovery/dnsx/releases/download/${DNSX_VERSION}/dnsx_${DNSX_VERSION}_linux_${GOARCH}.zip" -o /tmp/dnsx.zip \
+    DX_VER=${DNSX_VERSION#v} \
+    && curl -sSL "https://github.com/projectdiscovery/dnsx/releases/download/${DNSX_VERSION}/dnsx_${DX_VER}_linux_${GOARCH}.zip" -o /tmp/dnsx.zip \
     && unzip -o /tmp/dnsx.zip -d /usr/local/bin/ dnsx \
     && rm /tmp/dnsx.zip; \
     \
