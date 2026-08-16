@@ -1,10 +1,10 @@
 # Multi-stage Dockerfile for vapt-recon
 # Stage 1: Build Go tools
-FROM golang:1.23-alpine AS go-builder
+FROM golang:1.24-alpine AS go-builder
 
 RUN apk add --no-cache git make gcc musl-dev
 
-# Install ProjectDiscovery tools (pinned to versions compatible with Go 1.23)
+# Install ProjectDiscovery tools (compatible with Go 1.24)
 RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0 \
     && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0 \
     && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7 \
