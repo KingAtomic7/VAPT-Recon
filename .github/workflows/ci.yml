@@ -89,6 +89,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
+            type=raw,value=sha-{{sha}},enable=true
             type=raw,value=latest,enable={{is_default_branch}}
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -109,7 +110,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.meta.outputs.manifest-digest }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
           format: sarif
           output: trivy-results.sarif
           scanners: vuln
