@@ -12,7 +12,7 @@ FROM projectdiscovery/dnsx:v1.2.1 AS dnsx
 FROM golang:1.22-alpine AS go-tools
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
 RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0 \
-    && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.0 \
+    && go install -v github.com/projectdiscovery/katana/cmd/katana@latest \
     && go install -v github.com/tomnomnom/assetfinder@latest \
     && go install -v github.com/tomnomnom/waybackunique@latest \
     && go install -v github.com/lc/gau/v2/cmd/gau@latest \
