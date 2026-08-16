@@ -15,9 +15,9 @@ RUN apk add --no-cache git make gcc musl-dev libpcap-dev
 RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
 RUN go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.3
 RUN go install -v github.com/tomnomnom/assetfinder@latest
-RUN go install -v github.com/tomnomnom/waybackunique@latest
-RUN go install -v github.com/lc/gau/v2/cmd/gau@latest
-RUN go install -v github.com/hahwul/dalfox/v2@latest
+RUN go install -v github.com/tomnomnom/waybackunique@v0.0.0-20230118122455-2e9d7e4e7c5e
+RUN go install -v github.com/lc/gau/v2/cmd/gau@v2.2.4
+RUN go install -v github.com/hahwul/dalfox/v2@v2.8.0
 
 # Stage 3: Python runtime with all tools
 FROM python:3.11-slim
