@@ -69,7 +69,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      tags: ${{ steps.meta.outputs.tags }}
+      image_ref: ${{ steps.push.outputs.image_ref }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -94,6 +94,7 @@ jobs:
             type=raw,value=sha-{{sha}},enable=true
             type=raw,value=latest,enable={{is_default_branch}}
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -102,6 +103,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           no-cache: true
           platforms: linux/amd64,linux/arm64
+      - name: Extract sha tag for security scan
+        run: |
+          # Find the sha-* tag from meta output
+          sha_tag=$(echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | grep '^sha-' | head -1)
+          echo "image_ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${sha_tag}" >> $GITHUB_OUTPUT
 
   security:
     name: Security Scan
@@ -109,17 +115,10 @@ jobs:
     needs: docker
     if: github.event_name != 'pull_request'
     steps:
-      - name: Extract image tag
-        id: tag
-        run: |
-          # Get the sha-* tag from docker job outputs
-          tags="${{ needs.docker.outputs.tags }}"
-          sha_tag=$(echo "$tags" | tr ',' '\n' | grep '^sha-' | head -1)
-          echo "image_ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${sha_tag}" >> $GITHUB_OUTPUT
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ steps.tag.outputs.image_ref }}
+          image-ref: ${{ needs.docker.outputs.image_ref }}
           format: sarif
           output: trivy-results.sarif
           scanners: vuln
