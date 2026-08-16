@@ -8,12 +8,12 @@ FROM projectdiscovery/nuclei:v3.3.7 AS nuclei
 FROM projectdiscovery/httpx:v1.6.8 AS httpx
 FROM projectdiscovery/katana:v1.1.0 AS katana
 FROM projectdiscovery/dnsx:v1.2.1 AS dnsx
-FROM owasp/amass:v4.2.0 AS amass
 
-# Stage 2: Build additional tools
+# Stage 2: Build amass and additional tools from source
 FROM golang:1.22-alpine AS go-tools
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
-RUN go install -v github.com/tomnomnom/assetfinder@latest \
+RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0 \
+    && go install -v github.com/tomnomnom/assetfinder@latest \
     && go install -v github.com/tomnomnom/waybackunique@latest \
     && go install -v github.com/lc/gau/v2/cmd/gau@latest \
     && go install -v github.com/hahwul/dalfox/v2@latest
@@ -43,9 +43,8 @@ COPY --from=nuclei /usr/local/bin/nuclei /usr/local/bin/nuclei
 COPY --from=httpx /usr/local/bin/httpx /usr/local/bin/httpx
 COPY --from=katana /usr/local/bin/katana /usr/local/bin/katana
 COPY --from=dnsx /usr/local/bin/dnsx /usr/local/bin/dnsx
-COPY --from=amass /usr/bin/amass /usr/local/bin/amass
 
-# Copy additional tools from go-tools
+# Copy amass and additional tools from go-tools
 COPY --from=go-tools /go/bin/* /usr/local/bin/
 
 # Verify tools
