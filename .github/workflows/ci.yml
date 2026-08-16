@@ -48,6 +48,8 @@ jobs:
           wget -q https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
           sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
           echo "/usr/local/go/bin" >> $GITHUB_PATH
+      - name: Install system dependencies for Go tools
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
       - name: Install test tools
         run: |
           go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0
