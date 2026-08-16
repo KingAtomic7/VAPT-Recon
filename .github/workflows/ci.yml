@@ -69,7 +69,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_ref: ${{ steps.push.outputs.image_ref }}
+      image_ref: ${{ steps.extract_tag.outputs.image_ref }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -104,6 +104,7 @@ jobs:
           no-cache: true
           platforms: linux/amd64,linux/arm64
       - name: Extract sha tag for security scan
+        id: extract_tag
         run: |
           # Find the sha-* tag from meta output
           sha_tag=$(echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | grep '^sha-' | head -1)
