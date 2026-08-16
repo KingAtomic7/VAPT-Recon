@@ -4,18 +4,18 @@ FROM golang:1.24-alpine AS go-builder
 
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
 
-# Install ProjectDiscovery tools (compatible with Go 1.24)
-RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0 \
-    && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0 \
-    && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7 \
-    && go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.8 \
-    && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.0 \
-    && go install -v github.com/projectdiscovery/asnmap/cmd/asnmap@v1.1.0 \
+# Install ProjectDiscovery tools (use @latest for Go 1.24 compatibility)
+RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest \
+    && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest \
+    && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest \
+    && go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest \
+    && go install -v github.com/projectdiscovery/katana/cmd/katana@latest \
+    && go install -v github.com/projectdiscovery/asnmap/cmd/asnmap@latest \
     && go install -v github.com/projectdiscovery/alterx/cmd/alterx@latest \
-    && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1 \
-    && go install -v github.com/projectdiscovery/tlsx/cmd/tlsx@v1.1.4 \
-    && go install -v github.com/projectdiscovery/uncover/cmd/uncover@v1.0.4 \
-    && go install -v github.com/projectdiscovery/cover/cmd/cover@v1.0.2
+    && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest \
+    && go install -v github.com/projectdiscovery/tlsx/cmd/tlsx@latest \
+    && go install -v github.com/projectdiscovery/uncover/cmd/uncover@latest \
+    && go install -v github.com/projectdiscovery/cover/cmd/cover@latest
 
 # Install amass
 RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
