@@ -8,7 +8,7 @@ RUN apk add --no-cache curl tar gzip unzip
 
 # Tool versions - release tags include 'v' (e.g., v2.14.0), asset filenames don't
 ARG SUBFINDER_VERSION=v2.14.0
-ARG NAABU_VERSION=v2.3.0
+ARG NAABU_VERSION=v2.3.7
 ARG NUCLEI_VERSION=v3.11.1
 ARG HTTPX_VERSION=v1.6.10
 ARG KATANA_VERSION=v1.1.3
