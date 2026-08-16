@@ -8,16 +8,12 @@ FROM projectdiscovery/nuclei:v3.11.1 AS nuclei
 FROM projectdiscovery/httpx:v1.6.10 AS httpx
 FROM projectdiscovery/dnsx:v1.2.1 AS dnsx
 
-# Stage 2: Build remaining tools from source (Go 1.23 - better compatibility)
+# Stage 2: Build amass and katana from source (Go 1.23)
 FROM golang:1.23-alpine AS go-tools
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
-# Install tools separately to isolate failures
+# Install essential tools only
 RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
 RUN go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.3
-RUN go install -v github.com/tomnomnom/assetfinder@latest
-RUN go install -v github.com/tomnomnom/waybackunique@v0.0.0-20230118122455-2e9d7e4e7c5e
-RUN go install -v github.com/lc/gau/v2/cmd/gau@v2.2.4
-RUN go install -v github.com/hahwul/dalfox/v2@v2.8.0
 
 # Stage 3: Python runtime with all tools
 FROM python:3.11-slim
