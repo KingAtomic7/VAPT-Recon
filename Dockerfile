@@ -61,8 +61,8 @@ RUN set -ex; \
     && unzip -o /tmp/dnsx.zip -d /usr/local/bin/ dnsx \
     && rm /tmp/dnsx.zip; \
     \
-    # amass
-    curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_linux_${GOARCH}.zip" -o /tmp/amass.zip \
+    # amass (uses amass_Linux_amd64.zip with capital L)
+    curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_Linux_${GOARCH}.zip" -o /tmp/amass.zip \
     && unzip -o /tmp/amass.zip -d /tmp/amass/ \
     && mv /tmp/amass/amass /usr/local/bin/ \
     && rm -rf /tmp/amass.zip /tmp/amass
