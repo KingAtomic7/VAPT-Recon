@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""vapt-recon: Automated VAPT Reconnaissance Pipeline"""
+"""VAPT-Recon: Automated VAPT Reconnaissance Pipeline"""
 
 import asyncio
 import sys
@@ -23,7 +23,7 @@ from core.recon import run_recon
 from reporting import generate_reports
 
 app = typer.Typer(
-    name="vapt-recon",
+    name="VAPT-Recon",
     help="Automated VAPT reconnaissance pipeline",
     add_completion=False,
     rich_markup_mode="rich",
@@ -33,7 +33,7 @@ console = Console()
 
 def version_callback(value: bool) -> None:
     if value:
-        console.print("vapt-recon 0.1.0")
+        console.print("VAPT-Recon 0.1.0")
         raise typer.Exit()
 
 
@@ -101,7 +101,7 @@ def scan(
 
     console.print(
         Panel.fit(
-            f"[bold cyan]vapt-recon[/bold cyan] - {profile.value.upper()} scan\n"
+            f"[bold cyan]VAPT-Recon[/bold cyan] - {profile.value.upper()} scan\n"
             f"Target: [bold]{target}[/bold]\n"
             f"Reports: {', '.join(r.value for r in config.report_formats)}",
             title="Starting Scan",

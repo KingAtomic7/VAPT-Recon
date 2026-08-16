@@ -28,20 +28,20 @@ All Go tools pre-installed, multi-arch (amd64/arm64):
 docker run -it --rm \
   -v $(pwd)/reports:/home/scanner/reports \
   ghcr.io/KingAtomic7/vapt-recon:latest \
-  scan example.com --profile standard --report html,pdf
+  vapt-recon scan example.com --profile standard --report html,pdf
 ```
 
 ### pipx (Isolated — requires Go tools for scanning)
 ```bash
-pipx install git+https://github.com/KingAtomic7/vapt-recon.git
+pipx install git+https://github.com/KingAtomic7/VAPT-Recon.git
 # Install Go tools (see below), then:
 vapt-recon scan example.com --profile standard
 ```
 
 ### Development Install (requires Go tools for scanning)
 ```bash
-git clone https://github.com/KingAtomic7/vapt-recon.git
-cd vapt-recon
+git clone https://github.com/KingAtomic7/VAPT-Recon.git
+cd VAPT-Recon
 pip install -e .[dev]
 
 # Install Go 1.22+ and ProjectDiscovery tools:

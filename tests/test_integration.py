@@ -1,4 +1,4 @@
-"""Integration tests for vapt-recon pipeline."""
+"""Integration tests for VAPT-Recon pipeline."""
 
 import json
 from pathlib import Path

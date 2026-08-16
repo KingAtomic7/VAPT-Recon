@@ -1,4 +1,4 @@
-"""vapt-recon utility modules."""
+"""VAPT-Recon utility modules."""
 
 from utils.dedupe import (
     finding_fingerprint,

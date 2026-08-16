@@ -1,4 +1,4 @@
-"""vapt-recon core modules."""
+"""VAPT-Recon core modules."""
 
 from core.models import (
     Finding,

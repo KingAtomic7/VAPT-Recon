@@ -2,7 +2,7 @@
 
 ## System Overview
 
-vapt-recon is an async-first, modular reconnaissance pipeline built for penetration testing workflows. It follows a phased approach where each phase produces structured data consumed by subsequent phases.
+VAPT-Recon is an async-first, modular reconnaissance pipeline built for penetration testing workflows. It follows a phased approach where each phase produces structured data consumed by subsequent phases.
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐

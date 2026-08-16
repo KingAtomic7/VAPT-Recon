@@ -1,4 +1,4 @@
-"""Pydantic models for vapt-recon."""
+"""Pydantic models for VAPT-Recon."""
 
 from __future__ import annotations
 

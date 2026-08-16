@@ -1,11 +1,11 @@
-# vapt-recon Makefile
+# VAPT-Recon Makefile
 # Developer convenience commands
 
 .PHONY: help install lint typecheck test test-cov docker-build docker-run scan clean
 
 # Default target
 help:
-	@echo "vapt-recon - Automated VAPT Reconnaissance Pipeline"
+	@echo "VAPT-Recon - Automated VAPT Reconnaissance Pipeline"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make install       Install package in development mode"

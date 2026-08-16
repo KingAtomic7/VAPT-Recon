@@ -1,4 +1,4 @@
-# Pre-commit hooks for vapt-recon
+# Pre-commit hooks for VAPT-Recon
 # Install: pre-commit install
 # Run: pre-commit run --all-files
 

@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for vapt-recon
+# Multi-stage Dockerfile for VAPT-Recon
 # Download pre-built binaries from GitHub releases (no Go compilation)
 
 # Stage 1: Download all tool binaries
