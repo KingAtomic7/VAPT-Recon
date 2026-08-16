@@ -13,7 +13,7 @@ FROM golang:1.23-alpine AS go-tools
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
 # Install tools separately to isolate failures
 RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
-RUN go install -v github.com/projectdiscovery/katana/cmd/katana@latest
+RUN go install -v github.com/projectdiscovery/katana/cmd/katana@v1.6.1
 RUN go install -v github.com/tomnomnom/assetfinder@latest
 RUN go install -v github.com/tomnomnom/waybackunique@latest
 RUN go install -v github.com/lc/gau/v2/cmd/gau@latest
