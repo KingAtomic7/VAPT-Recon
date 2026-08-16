@@ -37,9 +37,9 @@ RUN . /tmp/arch.txt && KT_VER=${KATANA_VERSION#v} && curl -sSL "https://github.c
 
 RUN . /tmp/arch.txt && DX_VER=${DNSX_VERSION#v} && curl -sSL "https://github.com/projectdiscovery/dnsx/releases/download/${DNSX_VERSION}/dnsx_${DX_VER}_linux_${GOARCH}.zip" -o /tmp/dnsx.zip && unzip -o /tmp/dnsx.zip -d /usr/local/bin/ dnsx && rm /tmp/dnsx.zip
 
-# amass v5.1.1 uses .tar.gz format
+# amass v5.1.1 uses .tar.gz format (extracts to amass_linux_${GOARCH}/amass)
 ARG AMASS_VERSION=v5.1.1
-RUN . /tmp/arch.txt && curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_linux_${GOARCH}.tar.gz" -o /tmp/amass.tar.gz && mkdir -p /tmp/amass && tar -xzf /tmp/amass.tar.gz -C /tmp/amass/ && mv /tmp/amass/amass /usr/local/bin/ && rm -rf /tmp/amass.tar.gz /tmp/amass
+RUN . /tmp/arch.txt && curl -sSL "https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_linux_${GOARCH}.tar.gz" -o /tmp/amass.tar.gz && mkdir -p /tmp/amass && tar -xzf /tmp/amass.tar.gz -C /tmp/amass/ && mv /tmp/amass/amass_linux_${GOARCH}/amass /usr/local/bin/ && rm -rf /tmp/amass.tar.gz /tmp/amass
 
 # Stage 2: Python runtime with tools
 FROM python:3.11-slim
