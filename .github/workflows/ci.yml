@@ -44,7 +44,7 @@ jobs:
         run: pip install -e .[dev]
       - name: Install Go tools for integration tests
         run: |
-          GO_VERSION=1.23.0
+          GO_VERSION=1.22.0
           wget -q https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
           sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
           echo "/usr/local/go/bin" >> $GITHUB_PATH
