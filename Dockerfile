@@ -1,10 +1,12 @@
 # Multi-stage Dockerfile for vapt-recon
-# Single Go builder stage with GOPROXY (Go 1.22)
+# Debian-based Go builder (better CGO support for libpcap/naabu)
 
 # Stage 1: Build all Go tools from source
-FROM golang:1.22-alpine AS go-builder
+FROM golang:1.22-bookworm AS go-builder
 
-RUN apk add --no-cache git make gcc musl-dev libpcap-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git make gcc libpcap-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set Go proxy for module downloads
 ENV GOPROXY=https://proxy.golang.org,direct
@@ -34,6 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
+    libpcap0.8 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Go binaries from builder
