@@ -66,16 +66,22 @@ async def enrich_ssl(host: str, port: int = 443, limiter=None) -> dict[str, Any]
         with socket.create_connection((host, port), timeout=10) as sock:
             with context.wrap_socket(sock, server_hostname=host) as ssock:
                 cert = ssock.getpeercert()
+                if cert is None:
+                    return {"host": host, "port": port, "error": "no certificate"}
+
+                subject_list: list[tuple] = cert.get("subject", []) or []  # type: ignore[assignment]
+                issuer_list: list[tuple] = cert.get("issuer", []) or []  # type: ignore[assignment]
+                san_list: list[tuple] = cert.get("subjectAltName", []) or []  # type: ignore[assignment]
                 return {
                     "host": host,
                     "port": port,
-                    "subject": dict(x[0] for x in cert.get("subject", [])),
-                    "issuer": dict(x[0] for x in cert.get("issuer", [])),
+                    "subject": dict(x[0] for x in subject_list if isinstance(x, tuple)),
+                    "issuer": dict(x[0] for x in issuer_list if isinstance(x, tuple)),
                     "version": cert.get("version"),
                     "serial_number": cert.get("serialNumber"),
                     "not_before": cert.get("notBefore"),
                     "not_after": cert.get("notAfter"),
-                    "san": [x[1] for x in cert.get("subjectAltName", [])],
+                    "san": [x[1] for x in san_list if isinstance(x, tuple)],
                     "signature_algorithm": cert.get("signatureAlgorithm"),
                 }
     except Exception as e:
@@ -142,25 +148,25 @@ async def run_enrichment(target: str, subdomains: list, services: list, config) 
 
     # SSL for HTTPS services
     if enrich_config.get("ssl", False):
-        ssl_results = []
+        ssl_results: list[dict[str, Any]] = []
         for svc in services:
             if svc.port in (443, 8443) or svc.service in ("https", "ssl"):
                 ssl_results.append(await enrich_ssl(svc.host, svc.port, limiter))
-        results["ssl"] = ssl_results
+        results["ssl"] = ssl_results  # type: ignore[assignment]
 
     # Shodan
     if enrich_config.get("shodan", False):
         import os
 
-        api_key = os.getenv("SHODAN_API_KEY")
+        api_key = os.getenv("SHODAN_API_KEY") or ""
         results["shodan"] = await enrich_shodan(target, api_key, limiter)
 
     # Censys
     if enrich_config.get("censys", False):
         import os
 
-        api_id = os.getenv("CENSYS_API_ID")
-        api_secret = os.getenv("CENSYS_API_SECRET")
+        api_id = os.getenv("CENSYS_API_ID") or ""
+        api_secret = os.getenv("CENSYS_API_SECRET") or ""
         results["censys"] = await enrich_censys(target, api_id, api_secret, limiter)
 
     return results

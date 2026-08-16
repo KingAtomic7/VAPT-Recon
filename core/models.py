@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class Profile(StrEnum):
@@ -118,6 +118,7 @@ class ReconConfig(BaseModel):
     resume: bool = False
     config_path: Path | None = None
     checkpoint_file: Path | None = None
+    _profile_config: dict[str, Any] = PrivateAttr(default_factory=dict)
 
     def model_post_init(self, __context: Any) -> None:
         self.output_dir = Path(self.output_dir)

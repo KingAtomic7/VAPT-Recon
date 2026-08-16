@@ -15,7 +15,7 @@ async def _run_katana(
     targets: list[str], config: ReconConfig, limiter, profile_config: dict
 ) -> list[str]:
     """Run katana for crawling and URL discovery."""
-    urls = []
+    urls: list[str] = []
     params_config = profile_config.get("params", {})
     max_urls = params_config.get("max_urls", 500)
 
@@ -60,7 +60,7 @@ async def _run_katana(
 
 async def _run_paramspider(targets: list[str], config: ReconConfig, limiter) -> list[str]:
     """Run paramspider for parameter discovery."""
-    urls = []
+    urls: list[str] = []
     if not targets:
         return urls
 
@@ -88,7 +88,7 @@ async def _run_paramspider(targets: list[str], config: ReconConfig, limiter) -> 
 
 async def _run_arjun(urls: list[str], config: ReconConfig, limiter) -> list[str]:
     """Run arjun for parameter discovery."""
-    discovered = []
+    discovered: list[str] = []
     if not urls:
         return discovered
 
@@ -127,7 +127,7 @@ async def _fuzz_parameters(
     urls: list[str], config: ReconConfig, limiter, profile_config: dict
 ) -> list[Finding]:
     """Fuzz discovered parameters with nuclei fuzzing templates."""
-    findings = []
+    findings: list[Finding] = []
     params_config = profile_config.get("params", {})
     fuzz_templates = params_config.get("fuzz_templates", "fuzzing")
 

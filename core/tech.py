@@ -46,7 +46,7 @@ def _categorize_tech(name: str) -> str:
 
 async def _run_httpx(services: list[PortService], config: ReconConfig, limiter) -> list[Technology]:
     """Run httpx for technology detection."""
-    technologies = []
+    technologies: list[Technology] = []
     urls = []
     for svc in services:
         scheme = "https" if svc.port in (443, 8443) else "http"
@@ -149,7 +149,7 @@ async def _run_wappalyzer(
     services: list[PortService], config: ReconConfig, limiter
 ) -> list[Technology]:
     """Run Wappalyzer CLI for technology detection."""
-    technologies = []
+    technologies: list[Technology] = []
     urls = []
     for svc in services:
         scheme = "https" if svc.port in (443, 8443) else "http"

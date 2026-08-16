@@ -36,7 +36,7 @@ async def _run_nuclei(
     targets: list[str], config: ReconConfig, limiter, profile_config: dict
 ) -> list[Finding]:
     """Run nuclei vulnerability scanner."""
-    findings = []
+    findings: list[Finding] = []
     vuln_config = profile_config.get("vulns", {}).get("nuclei", {})
 
     severity = vuln_config.get("severity", ["critical", "high"])

@@ -88,31 +88,36 @@ async def _run_nmap(
 
             for port_elem in host_elem.findall("ports/port"):
                 port_id = int(port_elem.get("portid", 0))
-                protocol = port_elem.get("protocol", "tcp")
+                protocol_raw = port_elem.get("protocol", "tcp")
+                protocol = protocol_raw if protocol_raw in ("tcp", "udp") else "tcp"
                 state_elem = port_elem.find("state")
-                state = state_elem.get("state", "open") if state_elem is not None else "open"
+                state_raw = state_elem.get("state", "open") if state_elem is not None else "open"
+                state = state_raw if state_raw in ("open", "filtered", "closed") else "open"
 
                 service_elem = port_elem.find("service")
                 service = service_elem.get("name") if service_elem is not None else None
                 version = None
                 if service_elem is not None:
-                    version_parts = []
-                    if service_elem.get("product"):
-                        version_parts.append(service_elem.get("product"))
-                    if service_elem.get("version"):
-                        version_parts.append(service_elem.get("version"))
-                    if service_elem.get("extrainfo"):
-                        version_parts.append(service_elem.get("extrainfo"))
+                    version_parts: list[str] = []
+                    product = service_elem.get("product")
+                    if product:
+                        version_parts.append(product)
+                    ver = service_elem.get("version")
+                    if ver:
+                        version_parts.append(ver)
+                    extra = service_elem.get("extrainfo")
+                    if extra:
+                        version_parts.append(extra)
                     version = " ".join(version_parts) if version_parts else None
 
                 services.append(
                     PortService(
                         host=host,
                         port=port_id,
-                        protocol=protocol,
+                        protocol=protocol,  # type: ignore[arg-type]
                         service=service,
                         version=version,
-                        state=state,
+                        state=state,  # type: ignore[arg-type]
                         source="nmap",
                     )
                 )
