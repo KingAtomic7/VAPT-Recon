@@ -1,21 +1,21 @@
 # Multi-stage Dockerfile for vapt-recon
-# Uses official ProjectDiscovery images where available
+# Single Go builder stage for reliability
 
-# Stage 1: Use official ProjectDiscovery images (available on Docker Hub)
-FROM projectdiscovery/subfinder:v2.14.0 AS subfinder
-FROM projectdiscovery/naabu:v2.3.0 AS naabu
-FROM projectdiscovery/nuclei:v3.11.1 AS nuclei
-FROM projectdiscovery/httpx:v1.6.10 AS httpx
-FROM projectdiscovery/dnsx:v1.2.1 AS dnsx
+# Stage 1: Build all Go tools from source
+FROM golang:1.23-alpine AS go-builder
 
-# Stage 2: Build amass and katana from source (Go 1.23)
-FROM golang:1.23-alpine AS go-tools
 RUN apk add --no-cache git make gcc musl-dev libpcap-dev
-# Install essential tools only
-RUN go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
-RUN go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.3
 
-# Stage 3: Python runtime with all tools
+# Install all tools with known working versions
+RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0 \
+    && go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0 \
+    && go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1 \
+    && go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.10 \
+    && go install -v github.com/projectdiscovery/katana/cmd/katana@v1.1.3 \
+    && go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1 \
+    && go install -v github.com/owasp-amass/amass/v4/...@v4.2.0
+
+# Stage 2: Python runtime with tools
 FROM python:3.11-slim
 
 # Install system dependencies
@@ -33,15 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy tools from ProjectDiscovery images (PD images use /go/bin for Go binaries)
-COPY --from=subfinder /go/bin/* /usr/local/bin/
-COPY --from=naabu /go/bin/* /usr/local/bin/
-COPY --from=nuclei /go/bin/* /usr/local/bin/
-COPY --from=httpx /go/bin/* /usr/local/bin/
-COPY --from=dnsx /go/bin/* /usr/local/bin/
-
-# Copy remaining tools from go-tools
-COPY --from=go-tools /go/bin/* /usr/local/bin/
+# Copy Go binaries from builder
+COPY --from=go-builder /go/bin/* /usr/local/bin/
 
 # Verify tools
 RUN subfinder -version && naabu -version && nuclei -version && httpx -version
