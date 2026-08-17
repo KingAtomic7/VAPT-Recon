@@ -7,13 +7,14 @@ FROM alpine:3.20 AS tool-downloader
 RUN apk add --no-cache curl tar gzip unzip
 
 # Tool versions - release tags include 'v' (e.g., v2.14.0), asset filenames don't
-ARG SUBFINDER_VERSION=v2.14.0
-ARG NAABU_VERSION=v2.3.7
+# Updated to versions built with Go >=1.24.13 to fix CVE-2025-68121
+ARG SUBFINDER_VERSION=v2.15.0
+ARG NAABU_VERSION=v2.3.9
 ARG NUCLEI_VERSION=v3.11.1
 ARG HTTPX_VERSION=v1.6.10
-ARG KATANA_VERSION=v1.1.3
-ARG DNSX_VERSION=v1.2.1
-ARG AMASS_VERSION=v4.2.0
+ARG KATANA_VERSION=v1.2.0
+ARG DNSX_VERSION=v1.2.2
+ARG AMASS_VERSION=v5.1.1
 
 # Detect architecture
 RUN set -ex; \

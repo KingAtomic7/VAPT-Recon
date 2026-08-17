@@ -52,10 +52,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
       - name: Install test tools
         run: |
-          go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.14.0
-          go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.0
-          go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7
-          go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.8
+          go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.15.0
+          go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.3.9
+          go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
+          go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.6.10
+          go install -v github.com/projectdiscovery/katana/cmd/katana@v1.2.0
+          go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.2
           echo "$HOME/go/bin" >> $GITHUB_PATH
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=core --cov=reporting --cov=utils --cov-fail-under=40
