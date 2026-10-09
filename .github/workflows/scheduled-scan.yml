@@ -34,7 +34,7 @@ jobs:
       packages: read
       actions: write
     container:
-      image: ghcr.io/${{ github.repository }}:latest
+      image: ghcr.io/kingatomic7/vapt-recon:latest
       options: --user 1000:1000
     steps:
       - name: Checkout repository
@@ -47,8 +47,8 @@ jobs:
         id: scan
         run: |
           vapt-recon scan "${{ github.event.inputs.target || 'example.com' }}" \
-            --profile "${{ github.event.inputs.profile }}" \
-            --report ${{ github.event.inputs.report_formats }} \
+            --profile "${{ github.event.inputs.profile || 'standard' }}" \
+            --report "${{ github.event.inputs.report_formats || 'html,pdf,json' }}" \
             --output ./reports \
             --rate 50
 
